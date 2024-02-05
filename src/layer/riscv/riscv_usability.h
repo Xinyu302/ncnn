@@ -19,6 +19,14 @@
 #include <riscv_vector.h>
 #endif // __riscv_vector
 
+static inline signed char float2int8(float v)
+{
+    int int32 = (int)roundf(v);
+    if (int32 > 127) return 127;
+    if (int32 < -127) return -127;
+    return (signed char)int32;
+}
+
 #if __riscv_vector
 static inline int csrr_vl()
 {
@@ -49,6 +57,84 @@ static inline int csrr_vlenb()
                  : "memory");
     return a;
 }
+
+static inline int64_t float2int8(vfloat32m1_t _vlow, vfloat32m1_t _vhigh)
+{
+    int vl = vsetvlmax_e32m1();
+    // _MM_ROUND_NEAREST round to even
+    // simulate round to nearest via +/-0.5 with round to zero
+    vfloat32m1_t _p5 = vfmv_v_f_f32m1(0.5f, vl);
+    // vint32m1_t _signmask = vmv_v_f(1 << 31, vl);
+    int32_t _signmask = 1 << 31;
+    vint32m1_t _signlow = vand_vx_i32m1(vreinterpret_v_f32m1_i32m1(_vlow), _signmask, vl);
+    vint32m1_t _signhigh = vand_vx_i32m1(vreinterpret_v_f32m1_i32m1(_vhigh), _signmask, vl);
+
+    vfloat32m1_t _p5low = vreinterpret_v_i32m1_f32m1(vxor_vv_i32m1(_signlow, vreinterpret_v_f32m1_i32m1(_p5), vl));
+    vfloat32m1_t _p5high = vreinterpret_v_i32m1_f32m1(vxor_vv_i32m1(_signhigh, vreinterpret_v_f32m1_i32m1(_p5), vl));
+
+    vfloat32m1_t _vlow5 = vfadd_vv_f32m1(_vlow, _p5low, vl);
+    vfloat32m1_t _vhigh5 = vfadd_vv_f32m1(_vhigh, _p5high, vl);
+
+    vint32m1_t _vlow32 = vfcvt_x_f_v_i32m1(_vlow5, vl);
+    vint32m1_t _vhigh32 = vfcvt_x_f_v_i32m1(_vhigh5, vl);
+    
+    // combine _vlow32 and _vhigh32 to a single vint32m2_t
+    vint32m2_t _v32 = vundefined_i32m2();
+    _v32 = vset_v_i32m1_i32m2 (_v32, 0, _vlow32);
+    _v32 = vset_v_i32m1_i32m2 (_v32, 1, _vhigh32);
+
+    vint16m1_t _v16 = vnclip_wx_i16m1(_v32, 0, vl);
+    vint16m2_t _v16_2 = vundefined_i16m2();
+    _v16_2 = vset_v_i16m1_i16m2 (_v16_2, 0, _v16);
+    vint8m1_t _v8 = vnclip_wx_i8m1(_v16_2, 0, vl);
+    _v8 = vmax_vx_i8m1(_v8, -127, vl);
+    int64_t _ret;
+    vse8_v_i8m1((int8_t *)&_ret, _v8, vl);
+    return _ret;
+}
+
+static inline vint8m1_t float2int8(vfloat32m1_t _v0, vfloat32m1_t _v1, vfloat32m1_t _v2, vfloat32m1_t _v3)
+{
+    int vl = vsetvlmax_e32m1();
+    // _MM_ROUND_NEAREST round to even
+    // simulate round to nearest via +/-0.5 with round to zero
+    vfloat32m1_t _p5 = vfmv_v_f_f32m1(0.5f, vl);
+    // vint32m1_t _signmask = vmv_v_f(1 << 31, vl);
+    int32_t _signmask = 1 << 31;
+    vint32m1_t _sign0 = vand_vx_i32m1(vreinterpret_v_f32m1_i32m1(_v0), _signmask, vl);
+    vint32m1_t _sign1 = vand_vx_i32m1(vreinterpret_v_f32m1_i32m1(_v1), _signmask, vl);
+    vint32m1_t _sign2 = vand_vx_i32m1(vreinterpret_v_f32m1_i32m1(_v2), _signmask, vl);
+    vint32m1_t _sign3 = vand_vx_i32m1(vreinterpret_v_f32m1_i32m1(_v3), _signmask, vl);
+
+    vfloat32m1_t _p5s0 = vreinterpret_v_i32m1_f32m1(vxor_vv_i32m1(_sign0, vreinterpret_v_f32m1_i32m1(_p5), vl));
+    vfloat32m1_t _p5s1 = vreinterpret_v_i32m1_f32m1(vxor_vv_i32m1(_sign1, vreinterpret_v_f32m1_i32m1(_p5), vl));
+    vfloat32m1_t _p5s2 = vreinterpret_v_i32m1_f32m1(vxor_vv_i32m1(_sign2, vreinterpret_v_f32m1_i32m1(_p5), vl));
+    vfloat32m1_t _p5s3 = vreinterpret_v_i32m1_f32m1(vxor_vv_i32m1(_sign3, vreinterpret_v_f32m1_i32m1(_p5), vl));
+
+    vfloat32m1_t _v05 = vfadd_vv_f32m1(_v0, _p5s0, vl);
+    vfloat32m1_t _v15 = vfadd_vv_f32m1(_v1, _p5s1, vl);
+    vfloat32m1_t _v25 = vfadd_vv_f32m1(_v2, _p5s2, vl);
+    vfloat32m1_t _v35 = vfadd_vv_f32m1(_v3, _p5s3, vl);
+
+    vint32m1_t _v0_32 = vfcvt_x_f_v_i32m1(_v05, vl);
+    vint32m1_t _v1_32 = vfcvt_x_f_v_i32m1(_v15, vl);
+    vint32m1_t _v2_32 = vfcvt_x_f_v_i32m1(_v25, vl);
+    vint32m1_t _v3_32 = vfcvt_x_f_v_i32m1(_v35, vl);
+
+    vl = vsetvlmax_e32m4();
+
+    vint32m4_t _v32 = vundefined_i32m4();
+    _v32 = vset_v_i32m1_i32m4 (_v32, 0, _v0_32);
+    _v32 = vset_v_i32m1_i32m4 (_v32, 1, _v1_32);
+    _v32 = vset_v_i32m1_i32m4 (_v32, 2, _v2_32);
+    _v32 = vset_v_i32m1_i32m4 (_v32, 3, _v3_32);
+
+    vint16m2_t _v16 = vnclip_wx_i16m2(_v32, 0, vl);
+    vint8m1_t _v8 = vnclip_wx_i8m1(_v16, 0, vl);
+    _v8 = vmax_vx_i8m1(_v8, -127, vl);
+    return _v8;
+}
+
 
 static inline vfloat32m8_t vle32_v_f32m8_f32m1(const float* ptr)
 {

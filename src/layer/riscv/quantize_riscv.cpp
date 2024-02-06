@@ -27,7 +27,6 @@ namespace ncnn {
 
 Quantize_riscv::Quantize_riscv()
 {
-    fprintf(stderr, "Quantize_riscv init\n");
 #if __riscv_vector
     support_packing = true;
 #endif // __riscv_vector
@@ -120,12 +119,6 @@ int Quantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Option&
                             _vhigh = vfmul_vf_f32m1(_vhigh, _scale, vl);
                             
                             int64_t _v = float2int8(_vlow, _vhigh);
-                            // float32x4_t _vlow = vld1q_f32(ptr0);
-                            // float32x4_t _vhigh = vld1q_f32(ptr1);
-                            // _vlow = vmulq_f32(_vlow, _scale);
-                            // _vhigh = vmulq_f32(_vhigh, _scale);
-                            // int8x8_t _v = float2int8(_vlow, _vhigh);
-                            // vst1_s8(outptr, _v);
                             *(int64_t*)outptr = _v;
 
                             ptr0 += 4;
@@ -146,9 +139,6 @@ int Quantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Option&
                         vfloat32m1_t _scale0 = vle32_v_f32m1((const float*)scale_data + i * 8, vl);
                         vfloat32m1_t _scale1 = vle32_v_f32m1((const float*)scale_data + i * 8 + 4, vl);
 
-                        // float32x4_t _scale0 = vld1q_f32((const float*)scale_data + i * 8);
-                        // float32x4_t _scale1 = vld1q_f32((const float*)scale_data + i * 8 + 4);
-
                         for (int j = 0; j < w; j++)
                         {
                             vfloat32m1_t _vlow = vle32_v_f32m1(ptr0, vl);
@@ -157,13 +147,6 @@ int Quantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Option&
                             _vhigh = vfmul_vv_f32m1(_vhigh, _scale1, vl);
                             int64_t _v = float2int8(_vlow, _vhigh);
                             *(int64_t*)outptr = _v;
-                            // float32x4_t _vlow = vld1q_f32(ptr0);
-                            // float32x4_t _vhigh = vld1q_f32(ptr1);
-                            // _vlow = vmulq_f32(_vlow, _scale0);
-                            // _vhigh = vmulq_f32(_vhigh, _scale1);
-                            // int8x8_t _v = float2int8(_vlow, _vhigh);
-                            // vst1_s8(outptr, _v);
-
                             ptr0 += 4;
                             ptr1 += 4;
                             outptr += 8;
@@ -252,7 +235,6 @@ int Quantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Option&
             {
                 if (scale_data_size == 1)
                 {
-                    // float32x4_t _scale = vdupq_n_f32(scale_data[0]);
                     float _scale = scale_data[0];
 
                     #pragma omp parallel for num_threads(opt.num_threads)
@@ -276,17 +258,6 @@ int Quantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Option&
 
                             vint8m1_t _v = float2int8(_v0, _v2, _v1, _v3);
                             vse8_v_i8m1(outptr, _v, 4 * vl);
-                            // float32x4_t _v0 = vld1q_f32(ptr0);
-                            // float32x4_t _v1 = vld1q_f32(ptr0 + 4);
-                            // float32x4_t _v2 = vld1q_f32(ptr1);
-                            // float32x4_t _v3 = vld1q_f32(ptr1 + 4);
-                            // _v0 = vmulq_f32(_v0, _scale);
-                            // _v1 = vmulq_f32(_v1, _scale);
-                            // _v2 = vmulq_f32(_v2, _scale);
-                            // _v3 = vmulq_f32(_v3, _scale);
-                            // vst1_s8(outptr, float2int8(_v0, _v2));
-                            // vst1_s8(outptr + 8, float2int8(_v1, _v3));
-
                             ptr0 += 8;
                             ptr1 += 8;
                             outptr += 16;
@@ -301,13 +272,6 @@ int Quantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Option&
 
                             int64_t _v = float2int8(_vlow, _vhigh);
                             *(int64_t*)outptr = _v;
-
-                            // float32x4_t _vlow = vld1q_f32(ptr0);
-                            // float32x4_t _vhigh = vld1q_f32(ptr1);
-                            // _vlow = vmulq_f32(_vlow, _scale);
-                            // _vhigh = vmulq_f32(_vhigh, _scale);
-                            // int8x8_t _v = float2int8(_vlow, _vhigh);
-                            // vst1_s8(outptr, _v);
                             ptr0 += 4;
                             ptr1 += 4;
                             outptr += 8;
@@ -326,9 +290,6 @@ int Quantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Option&
                         vfloat32m1_t _scale0 = vle32_v_f32m1((const float*)scale_data + q * 8, vl);
                         vfloat32m1_t _scale1 = vle32_v_f32m1((const float*)scale_data + q * 8 + 4, vl);
 
-                        // float32x4_t _scale0 = vld1q_f32((const float*)scale_data + q * 8);
-                        // float32x4_t _scale1 = vld1q_f32((const float*)scale_data + q * 8 + 4);
-
                         int i = 0;
                         for (; i < size; i++)
                         {
@@ -340,14 +301,6 @@ int Quantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Option&
 
                             int64_t _v = float2int8(_vlow, _vhigh);
                             *(int64_t*)outptr = _v;
-
-                            // float32x4_t _vlow = vld1q_f32(ptr0);
-                            // float32x4_t _vhigh = vld1q_f32(ptr1);
-                            // _vlow = vmulq_f32(_vlow, _scale0);
-                            // _vhigh = vmulq_f32(_vhigh, _scale1);
-                            // int8x8_t _v = float2int8(_vlow, _vhigh);
-                            // vst1_s8(outptr, _v);
-
                             ptr0 += 4;
                             ptr1 += 4;
                             outptr += 8;
@@ -499,8 +452,6 @@ int Quantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Option&
 
             int i = 0;
 #if __riscv_vector
-            // vfloat32m1_t _scale = vfmv_v_f_f32m1(scale);
-            // float32x4_t _scale = vdupq_n_f32(scale);
             float _scale = scale;
 
             for (; i + 15 < size; i += 16)
@@ -518,17 +469,6 @@ int Quantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Option&
                 vint8m1_t _v = float2int8(_v0, _v1, _v2, _v3);
                 vse8_v_i8m1(outptr, _v, 4 * vl);
 
-                // float32x4_t _v0 = vld1q_f32(ptr);
-                // float32x4_t _v1 = vld1q_f32(ptr + 4);
-                // float32x4_t _v2 = vld1q_f32(ptr + 8);
-                // float32x4_t _v3 = vld1q_f32(ptr + 12);
-                // _v0 = vmulq_f32(_v0, _scale);
-                // _v1 = vmulq_f32(_v1, _scale);
-                // _v2 = vmulq_f32(_v2, _scale);
-                // _v3 = vmulq_f32(_v3, _scale);
-                // vst1_s8(outptr, float2int8(_v0, _v1));
-                // vst1_s8(outptr + 8, float2int8(_v2, _v3));
-
                 ptr += 16;
                 outptr += 16;
             }
@@ -542,13 +482,6 @@ int Quantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Option&
 
                 int64_t _v = float2int8(_v0, _v1);
                 *(int64_t*)outptr = _v;
-                // float32x4_t _v0 = vld1q_f32(ptr);
-                // float32x4_t _v1 = vld1q_f32(ptr + 4);
-                // _v0 = vmulq_f32(_v0, _scale);
-                // _v1 = vmulq_f32(_v1, _scale);
-                // int8x8_t _v = float2int8(_v0, _v1);
-                // vst1_s8(outptr, _v);
-
                 ptr += 8;
                 outptr += 8;
             }

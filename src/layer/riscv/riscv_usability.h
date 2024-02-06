@@ -61,22 +61,8 @@ static inline int csrr_vlenb()
 static inline int64_t float2int8(vfloat32m1_t _vlow, vfloat32m1_t _vhigh)
 {
     int vl = vsetvlmax_e32m1();
-    // _MM_ROUND_NEAREST round to even
-    // simulate round to nearest via +/-0.5 with round to zero
-    vfloat32m1_t _p5 = vfmv_v_f_f32m1(0.5f, vl);
-    // vint32m1_t _signmask = vmv_v_f(1 << 31, vl);
-    int32_t _signmask = 1 << 31;
-    vint32m1_t _signlow = vand_vx_i32m1(vreinterpret_v_f32m1_i32m1(_vlow), _signmask, vl);
-    vint32m1_t _signhigh = vand_vx_i32m1(vreinterpret_v_f32m1_i32m1(_vhigh), _signmask, vl);
-
-    vfloat32m1_t _p5low = vreinterpret_v_i32m1_f32m1(vxor_vv_i32m1(_signlow, vreinterpret_v_f32m1_i32m1(_p5), vl));
-    vfloat32m1_t _p5high = vreinterpret_v_i32m1_f32m1(vxor_vv_i32m1(_signhigh, vreinterpret_v_f32m1_i32m1(_p5), vl));
-
-    vfloat32m1_t _vlow5 = vfadd_vv_f32m1(_vlow, _p5low, vl);
-    vfloat32m1_t _vhigh5 = vfadd_vv_f32m1(_vhigh, _p5high, vl);
-
-    vint32m1_t _vlow32 = vfcvt_x_f_v_i32m1(_vlow5, vl);
-    vint32m1_t _vhigh32 = vfcvt_x_f_v_i32m1(_vhigh5, vl);
+    vint32m1_t _vlow32 = vfcvt_x_f_v_i32m1(_vlow, vl);
+    vint32m1_t _vhigh32 = vfcvt_x_f_v_i32m1(_vhigh, vl);
 
     // combine _vlow32 and _vhigh32 to a single vint32m2_t
     vl = 2 * vsetvlmax_e32m1();
@@ -95,18 +81,7 @@ static inline int64_t float2int8(vfloat32m1_t _vlow, vfloat32m1_t _vhigh)
 static inline int32_t float2int8(vfloat32m1_t _v)
 {
     int vl = vsetvlmax_e32m1();
-    // _MM_ROUND_NEAREST round to even
-    // simulate round to nearest via +/-0.5 with round to zero
-
-    vfloat32m1_t _p5 = vfmv_v_f_f32m1(0.5f, vl);
-    // vint32m1_t _signmask = vmv_v_f(1 << 31, vl);
-    int32_t _signmask = 1 << 31;
-    vint32m1_t _sign = vand_vx_i32m1(vreinterpret_v_f32m1_i32m1(_v), _signmask, vl);
-
-    vfloat32m1_t _p5s = vreinterpret_v_i32m1_f32m1(vxor_vv_i32m1(_sign, vreinterpret_v_f32m1_i32m1(_p5), vl));
-
-    vfloat32m1_t _v5 = vfadd_vv_f32m1(_v, _p5s, vl);
-    vint32m1_t _v32m1 = vfcvt_x_f_v_i32m1(_v5, vl);
+    vint32m1_t _v32m1 = vfcvt_x_f_v_i32m1(_v, vl);
 
     vint32m4_t _v32 = vundefined_i32m4();
     _v32 = vset_v_i32m1_i32m4(_v32, 0, _v32m1);
@@ -119,33 +94,47 @@ static inline int32_t float2int8(vfloat32m1_t _v)
     return _ret;
 }
 
+static void  print_vint8m1(vint8m1_t _v)
+{
+    int8_t *i8 = (int8_t *)malloc(16 * sizeof(int8_t));
+    vse8_v_i8m1(i8, _v, 16);
+    for (int i = 0; i < 16; i++)
+    {
+        fprintf(stderr, "i8[%d]: %d\n", i, i8[i]);
+    }
+    free(i8);
+}
+
+static void print_vint32m1(vint32m1_t _v)
+{
+    int32_t *i32 = (int32_t *)malloc(4 * sizeof(int32_t));
+    vse32_v_i32m1(i32, _v, 4);
+    for (int i = 0; i < 4; i++)
+    {
+        fprintf(stderr, "i32[%d]: %d\n", i, i32[i]);
+    }
+    free(i32);
+}
+
+static void print_vfloat32m1(vfloat32m1_t _v)
+{
+    float *f32 = (float *)malloc(4 * sizeof(float));
+    vse32_v_f32m1(f32, _v, 4);
+    for (int i = 0; i < 4; i++)
+    {
+        fprintf(stderr, "f32[%d]: %f\n", i, f32[i]);
+    }
+    free(f32);
+}
+
 static inline vint8m1_t float2int8(vfloat32m1_t _v0, vfloat32m1_t _v1, vfloat32m1_t _v2, vfloat32m1_t _v3)
 {
     int vl = vsetvlmax_e32m1();
-    // _MM_ROUND_NEAREST round to even
-    // simulate round to nearest via +/-0.5 with round to zero
-    vfloat32m1_t _p5 = vfmv_v_f_f32m1(0.5f, vl);
-    // vint32m1_t _signmask = vmv_v_f(1 << 31, vl);
-    int32_t _signmask = 1 << 31;
-    vint32m1_t _sign0 = vand_vx_i32m1(vreinterpret_v_f32m1_i32m1(_v0), _signmask, vl);
-    vint32m1_t _sign1 = vand_vx_i32m1(vreinterpret_v_f32m1_i32m1(_v1), _signmask, vl);
-    vint32m1_t _sign2 = vand_vx_i32m1(vreinterpret_v_f32m1_i32m1(_v2), _signmask, vl);
-    vint32m1_t _sign3 = vand_vx_i32m1(vreinterpret_v_f32m1_i32m1(_v3), _signmask, vl);
 
-    vfloat32m1_t _p5s0 = vreinterpret_v_i32m1_f32m1(vxor_vv_i32m1(_sign0, vreinterpret_v_f32m1_i32m1(_p5), vl));
-    vfloat32m1_t _p5s1 = vreinterpret_v_i32m1_f32m1(vxor_vv_i32m1(_sign1, vreinterpret_v_f32m1_i32m1(_p5), vl));
-    vfloat32m1_t _p5s2 = vreinterpret_v_i32m1_f32m1(vxor_vv_i32m1(_sign2, vreinterpret_v_f32m1_i32m1(_p5), vl));
-    vfloat32m1_t _p5s3 = vreinterpret_v_i32m1_f32m1(vxor_vv_i32m1(_sign3, vreinterpret_v_f32m1_i32m1(_p5), vl));
-
-    vfloat32m1_t _v05 = vfadd_vv_f32m1(_v0, _p5s0, vl);
-    vfloat32m1_t _v15 = vfadd_vv_f32m1(_v1, _p5s1, vl);
-    vfloat32m1_t _v25 = vfadd_vv_f32m1(_v2, _p5s2, vl);
-    vfloat32m1_t _v35 = vfadd_vv_f32m1(_v3, _p5s3, vl);
-
-    vint32m1_t _v0_32 = vfcvt_x_f_v_i32m1(_v05, vl);
-    vint32m1_t _v1_32 = vfcvt_x_f_v_i32m1(_v15, vl);
-    vint32m1_t _v2_32 = vfcvt_x_f_v_i32m1(_v25, vl);
-    vint32m1_t _v3_32 = vfcvt_x_f_v_i32m1(_v35, vl);
+    vint32m1_t _v0_32 = vfcvt_x_f_v_i32m1(_v0, vl);
+    vint32m1_t _v1_32 = vfcvt_x_f_v_i32m1(_v1, vl);
+    vint32m1_t _v2_32 = vfcvt_x_f_v_i32m1(_v2, vl);
+    vint32m1_t _v3_32 = vfcvt_x_f_v_i32m1(_v3, vl);
 
     vl = vsetvlmax_e32m4();
 
@@ -158,6 +147,8 @@ static inline vint8m1_t float2int8(vfloat32m1_t _v0, vfloat32m1_t _v1, vfloat32m
     vint16m2_t _v16 = vnclip_wx_i16m2(_v32, 0, vl);
     vint8m1_t _v8 = vnclip_wx_i8m1(_v16, 0, vl);
     _v8 = vmax_vx_i8m1(_v8, -127, vl);
+    int8_t *i8 = (int8_t *)malloc(16 * sizeof(int8_t));
+    vse8_v_i8m1(i8, _v8, 16);
     return _v8;
 }
 

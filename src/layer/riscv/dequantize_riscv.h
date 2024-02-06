@@ -19,7 +19,7 @@
 
 namespace ncnn {
 
-class Dequantize_riscv: public Dequantize
+class Dequantize_riscv : public Dequantize
 {
 public:
     Dequantize_riscv();

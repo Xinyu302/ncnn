@@ -58,7 +58,6 @@ static inline int csrr_vlenb()
     return a;
 }
 
-
 static inline int64_t float2int8(vfloat32m1_t _vlow, vfloat32m1_t _vhigh)
 {
     int vl = vsetvlmax_e32m1();
@@ -78,22 +77,23 @@ static inline int64_t float2int8(vfloat32m1_t _vlow, vfloat32m1_t _vhigh)
 
     vint32m1_t _vlow32 = vfcvt_x_f_v_i32m1(_vlow5, vl);
     vint32m1_t _vhigh32 = vfcvt_x_f_v_i32m1(_vhigh5, vl);
-    
+
     // combine _vlow32 and _vhigh32 to a single vint32m2_t
     vl = 2 * vsetvlmax_e32m1();
     vint32m4_t _v32 = vundefined_i32m4();
-    _v32 = vset_v_i32m1_i32m4 (_v32, 0, _vlow32);
-    _v32 = vset_v_i32m1_i32m4 (_v32, 1, _vhigh32);
+    _v32 = vset_v_i32m1_i32m4(_v32, 0, _vlow32);
+    _v32 = vset_v_i32m1_i32m4(_v32, 1, _vhigh32);
 
     vint16m2_t _v16 = vnclip_wx_i16m2(_v32, 0, vl);
     vint8m1_t _v8 = vnclip_wx_i8m1(_v16, 0, vl);
     _v8 = vmax_vx_i8m1(_v8, -127, vl);
     int64_t _ret;
-    vse8_v_i8m1((int8_t *)&_ret, _v8, vl);
+    vse8_v_i8m1((int8_t*)&_ret, _v8, vl);
     return _ret;
 }
 
-static inline int32_t float2int8(vfloat32m1_t _v) {
+static inline int32_t float2int8(vfloat32m1_t _v)
+{
     int vl = vsetvlmax_e32m1();
     // _MM_ROUND_NEAREST round to even
     // simulate round to nearest via +/-0.5 with round to zero
@@ -109,16 +109,15 @@ static inline int32_t float2int8(vfloat32m1_t _v) {
     vint32m1_t _v32m1 = vfcvt_x_f_v_i32m1(_v5, vl);
 
     vint32m4_t _v32 = vundefined_i32m4();
-    _v32 = vset_v_i32m1_i32m4 (_v32, 0, _v32m1);
+    _v32 = vset_v_i32m1_i32m4(_v32, 0, _v32m1);
 
     vint16m2_t _v16 = vnclip_wx_i16m2(_v32, 0, vl);
     vint8m1_t _v8 = vnclip_wx_i8m1(_v16, 0, vl);
     _v8 = vmax_vx_i8m1(_v8, -127, vl);
     int32_t _ret;
-    vse8_v_i8m1((int8_t *)&_ret, _v8, vl);
+    vse8_v_i8m1((int8_t*)&_ret, _v8, vl);
     return _ret;
 }
-
 
 static inline vint8m1_t float2int8(vfloat32m1_t _v0, vfloat32m1_t _v1, vfloat32m1_t _v2, vfloat32m1_t _v3)
 {
@@ -151,10 +150,10 @@ static inline vint8m1_t float2int8(vfloat32m1_t _v0, vfloat32m1_t _v1, vfloat32m
     vl = vsetvlmax_e32m4();
 
     vint32m4_t _v32 = vundefined_i32m4();
-    _v32 = vset_v_i32m1_i32m4 (_v32, 0, _v0_32);
-    _v32 = vset_v_i32m1_i32m4 (_v32, 1, _v1_32);
-    _v32 = vset_v_i32m1_i32m4 (_v32, 2, _v2_32);
-    _v32 = vset_v_i32m1_i32m4 (_v32, 3, _v3_32);
+    _v32 = vset_v_i32m1_i32m4(_v32, 0, _v0_32);
+    _v32 = vset_v_i32m1_i32m4(_v32, 1, _v1_32);
+    _v32 = vset_v_i32m1_i32m4(_v32, 2, _v2_32);
+    _v32 = vset_v_i32m1_i32m4(_v32, 3, _v3_32);
 
     vint16m2_t _v16 = vnclip_wx_i16m2(_v32, 0, vl);
     vint8m1_t _v8 = vnclip_wx_i8m1(_v16, 0, vl);
@@ -181,18 +180,18 @@ static inline int64_t float2int8relu(vfloat32m1_t _vlow, vfloat32m1_t _vhigh)
 
     vint32m1_t _vlow32 = vfcvt_x_f_v_i32m1(_vlow5, vl);
     vint32m1_t _vhigh32 = vfcvt_x_f_v_i32m1(_vhigh5, vl);
-    
+
     // combine _vlow32 and _vhigh32 to a single vint32m2_t
     vl = 2 * vsetvlmax_e32m1();
     vint32m4_t _v32 = vundefined_i32m4();
-    _v32 = vset_v_i32m1_i32m4 (_v32, 0, _vlow32);
-    _v32 = vset_v_i32m1_i32m4 (_v32, 1, _vhigh32);
+    _v32 = vset_v_i32m1_i32m4(_v32, 0, _vlow32);
+    _v32 = vset_v_i32m1_i32m4(_v32, 1, _vhigh32);
 
     vint16m2_t _v16_2 = vnclip_wx_i16m2(_v32, 0, vl);
     vint8m1_t _v8 = vnclip_wx_i8m1(_v16_2, 0, vl);
     _v8 = vmax_vx_i8m1(_v8, 0, vl);
     int64_t _ret;
-    vse8_v_i8m1((int8_t *)&_ret, _v8, vl);
+    vse8_v_i8m1((int8_t*)&_ret, _v8, vl);
     return _ret;
 }
 
@@ -253,10 +252,10 @@ static inline vint8m1_t float2int8relu(vfloat32m1_t _v0, vfloat32m1_t _v1, vfloa
     vl = vsetvlmax_e32m4();
 
     vint32m4_t _v32 = vundefined_i32m4();
-    _v32 = vset_v_i32m1_i32m4 (_v32, 0, _v0_32);
-    _v32 = vset_v_i32m1_i32m4 (_v32, 1, _v1_32);
-    _v32 = vset_v_i32m1_i32m4 (_v32, 2, _v2_32);
-    _v32 = vset_v_i32m1_i32m4 (_v32, 3, _v3_32);
+    _v32 = vset_v_i32m1_i32m4(_v32, 0, _v0_32);
+    _v32 = vset_v_i32m1_i32m4(_v32, 1, _v1_32);
+    _v32 = vset_v_i32m1_i32m4(_v32, 2, _v2_32);
+    _v32 = vset_v_i32m1_i32m4(_v32, 3, _v3_32);
 
     vint16m2_t _v16 = vnclip_wx_i16m2(_v32, 0, vl);
     vint8m1_t _v8 = vnclip_wx_i8m1(_v16, 0, vl);

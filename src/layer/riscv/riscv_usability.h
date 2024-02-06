@@ -266,8 +266,8 @@ static inline vint8m1_t float2int8relu(vfloat32m1_t _v0, vfloat32m1_t _v1, vfloa
 static inline int64_t float2int8leakyrelu(vfloat32m1_t _vlow, vfloat32m1_t _vhigh, vfloat32m1_t _slope)
 {
     int vl = vsetvlmax_e32m1();
-    vfloat32m1_t _vlow_leaky = vsmul_vv_f32m1(_vlow, _slope, vl);
-    vfloat32m1_t _vhigh_leaky = vsmul_vv_f32m1(_vhigh, _slope, vl);
+    vfloat32m1_t _vlow_leaky = vfmul_vv_f32m1(_vlow, _slope, vl);
+    vfloat32m1_t _vhigh_leaky = vfmul_vv_f32m1(_vhigh, _slope, vl);
 
     // simulate round to nearest via +/-0.5 with round to zero
     vfloat32m1_t _p5 = vfmv_v_f_f32m1(0.5f, vl);
@@ -322,7 +322,7 @@ static inline int64_t float2int8leakyrelu(vfloat32m1_t _vlow, vfloat32m1_t _vhig
 
 static inline int32_t float2int8leakyrelu(vfloat32m1_t _v, vfloat32m1_t _slope) {
     int vl = vsetvlmax_e32m1();
-    vfloat32m1_t _v_leaky = vsmul_vv_f32m1(_v, _slope, vl);
+    vfloat32m1_t _v_leaky = vfmul_vv_f32m1(_v, _slope, vl);
 
     vfloat32m1_t _p5 = vfmv_v_f_f32m1(0.5f, vl);
     int32_t _signmask = 1 << 31;
@@ -361,10 +361,10 @@ static inline int32_t float2int8leakyrelu(vfloat32m1_t _v, vfloat32m1_t _slope) 
 static inline vint8m1_t float2int8leakyrelu(vfloat32m1_t _v0, vfloat32m1_t _v1, vfloat32m1_t _v2, vfloat32m1_t _v3, vfloat32m1_t _slope)
 {
     int vl = vsetvlmax_e32m1();
-    vfloat32m1_t _v0_leaky = vsmul_vv_f32m1(_v0, _slope, vl);
-    vfloat32m1_t _v1_leaky = vsmul_vv_f32m1(_v1, _slope, vl);
-    vfloat32m1_t _v2_leaky = vsmul_vv_f32m1(_v2, _slope, vl);
-    vfloat32m1_t _v3_leaky = vsmul_vv_f32m1(_v3, _slope, vl);
+    vfloat32m1_t _v0_leaky = vfmul_vv_f32m1(_v0, _slope, vl);
+    vfloat32m1_t _v1_leaky = vfmul_vv_f32m1(_v1, _slope, vl);
+    vfloat32m1_t _v2_leaky = vfmul_vv_f32m1(_v2, _slope, vl);
+    vfloat32m1_t _v3_leaky = vfmul_vv_f32m1(_v3, _slope, vl);
 
     vfloat32m1_t _p5 = vfmv_v_f_f32m1(0.5f, vl);
     int32_t _signmask = 1 << 31;

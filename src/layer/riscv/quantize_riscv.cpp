@@ -117,7 +117,7 @@ int Quantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Option&
                             vfloat32m1_t _vhigh = vle32_v_f32m1(ptr1, vl);
                             _vlow = vfmul_vf_f32m1(_vlow, _scale, vl);
                             _vhigh = vfmul_vf_f32m1(_vhigh, _scale, vl);
-                            
+
                             int64_t _v = float2int8(_vlow, _vhigh);
                             *(int64_t*)outptr = _v;
 

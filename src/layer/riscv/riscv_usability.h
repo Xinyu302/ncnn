@@ -94,9 +94,9 @@ static inline int32_t float2int8(vfloat32m1_t _v)
     return _ret;
 }
 
-static void  print_vint8m1(vint8m1_t _v)
+static void print_vint8m1(vint8m1_t _v)
 {
-    int8_t *i8 = (int8_t *)malloc(16 * sizeof(int8_t));
+    int8_t* i8 = (int8_t*)malloc(16 * sizeof(int8_t));
     vse8_v_i8m1(i8, _v, 16);
     for (int i = 0; i < 16; i++)
     {
@@ -107,7 +107,7 @@ static void  print_vint8m1(vint8m1_t _v)
 
 static void print_vint32m1(vint32m1_t _v)
 {
-    int32_t *i32 = (int32_t *)malloc(4 * sizeof(int32_t));
+    int32_t* i32 = (int32_t*)malloc(4 * sizeof(int32_t));
     vse32_v_i32m1(i32, _v, 4);
     for (int i = 0; i < 4; i++)
     {
@@ -118,7 +118,7 @@ static void print_vint32m1(vint32m1_t _v)
 
 static void print_vfloat32m1(vfloat32m1_t _v)
 {
-    float *f32 = (float *)malloc(4 * sizeof(float));
+    float* f32 = (float*)malloc(4 * sizeof(float));
     vse32_v_f32m1(f32, _v, 4);
     for (int i = 0; i < 4; i++)
     {
@@ -147,7 +147,7 @@ static inline vint8m1_t float2int8(vfloat32m1_t _v0, vfloat32m1_t _v1, vfloat32m
     vint16m2_t _v16 = vnclip_wx_i16m2(_v32, 0, vl);
     vint8m1_t _v8 = vnclip_wx_i8m1(_v16, 0, vl);
     _v8 = vmax_vx_i8m1(_v8, -127, vl);
-    int8_t *i8 = (int8_t *)malloc(16 * sizeof(int8_t));
+    int8_t* i8 = (int8_t*)malloc(16 * sizeof(int8_t));
     vse8_v_i8m1(i8, _v8, 16);
     return _v8;
 }
@@ -172,18 +172,19 @@ static inline int64_t float2int8relu(vfloat32m1_t _vlow, vfloat32m1_t _vhigh)
     return _ret;
 }
 
-static inline int32_t float2int8relu(vfloat32m1_t _v) {
+static inline int32_t float2int8relu(vfloat32m1_t _v)
+{
     int vl = vsetvlmax_e32m1();
     vint32m1_t _v32m1 = vfcvt_x_f_v_i32m1(_v, vl);
 
     vint32m4_t _v32 = vundefined_i32m4();
-    _v32 = vset_v_i32m1_i32m4 (_v32, 0, _v32m1);
+    _v32 = vset_v_i32m1_i32m4(_v32, 0, _v32m1);
 
     vint16m2_t _v16 = vnclip_wx_i16m2(_v32, 0, vl);
     vint8m1_t _v8 = vnclip_wx_i8m1(_v16, 0, vl);
     _v8 = vmax_vx_i8m1(_v8, 0, vl);
     int32_t _ret;
-    vse8_v_i8m1((int8_t *)&_ret, _v8, vl);
+    vse8_v_i8m1((int8_t*)&_ret, _v8, vl);
     return _ret;
 }
 
@@ -225,11 +226,11 @@ static inline int64_t float2int8leakyrelu(vfloat32m1_t _vlow, vfloat32m1_t _vhig
 
     vint32m4_t _v32 = vundefined_i32m4();
     vint32m4_t _v32_leaky = vundefined_i32m4();
-    _v32 = vset_v_i32m1_i32m4 (_v32, 0, _vlow32);
-    _v32 = vset_v_i32m1_i32m4 (_v32, 1, _vhigh32);
+    _v32 = vset_v_i32m1_i32m4(_v32, 0, _vlow32);
+    _v32 = vset_v_i32m1_i32m4(_v32, 1, _vhigh32);
 
-    _v32_leaky = vset_v_i32m1_i32m4 (_v32_leaky, 0, _vlow32_leaky);
-    _v32_leaky = vset_v_i32m1_i32m4 (_v32_leaky, 1, _vhigh32_leaky);
+    _v32_leaky = vset_v_i32m1_i32m4(_v32_leaky, 0, _vlow32_leaky);
+    _v32_leaky = vset_v_i32m1_i32m4(_v32_leaky, 1, _vhigh32_leaky);
 
     vint16m2_t _v16 = vnclip_wx_i16m2(_v32, 0, vl);
     vint16m2_t _v16_leaky = vnclip_wx_i16m2(_v32_leaky, 0, vl);
@@ -239,11 +240,12 @@ static inline int64_t float2int8leakyrelu(vfloat32m1_t _vlow, vfloat32m1_t _vhig
 
     _v8 = vmax_vv_i8m1(_v8, _v8_leaky, vl);
     int64_t _ret;
-    vse8_v_i8m1((int8_t *)&_ret, _v8, vl);
+    vse8_v_i8m1((int8_t*)&_ret, _v8, vl);
     return _ret;
 }
 
-static inline int32_t float2int8leakyrelu(vfloat32m1_t _v, vfloat32m1_t _slope) {
+static inline int32_t float2int8leakyrelu(vfloat32m1_t _v, vfloat32m1_t _slope)
+{
     int vl = vsetvlmax_e32m1();
     vfloat32m1_t _v_leaky = vfmul_vv_f32m1(_v, _slope, vl);
 
@@ -253,9 +255,9 @@ static inline int32_t float2int8leakyrelu(vfloat32m1_t _v, vfloat32m1_t _slope) 
     // vl = vsetvlmax_e32m4();
     vint32m4_t _v32 = vundefined_i32m4();
     vint32m4_t _v32_leaky = vundefined_i32m4();
-    
-    _v32 = vset_v_i32m1_i32m4 (_v32, 0, _v32m1);
-    _v32_leaky = vset_v_i32m1_i32m4 (_v32_leaky, 0, _v32m1_leaky);
+
+    _v32 = vset_v_i32m1_i32m4(_v32, 0, _v32m1);
+    _v32_leaky = vset_v_i32m1_i32m4(_v32_leaky, 0, _v32m1_leaky);
 
     vint16m2_t _v16 = vnclip_wx_i16m2(_v32, 0, vl);
     vint16m2_t _v16_leaky = vnclip_wx_i16m2(_v32_leaky, 0, vl);
@@ -265,7 +267,7 @@ static inline int32_t float2int8leakyrelu(vfloat32m1_t _v, vfloat32m1_t _slope) 
 
     _v8 = vmax_vv_i8m1(_v8, _v8_leaky, vl);
     int32_t _ret;
-    vse8_v_i8m1((int8_t *)&_ret, _v8, vl);
+    vse8_v_i8m1((int8_t*)&_ret, _v8, vl);
     return _ret;
 }
 
@@ -289,27 +291,26 @@ static inline vint8m1_t float2int8leakyrelu(vfloat32m1_t _v0, vfloat32m1_t _v1, 
 
     vl = vsetvlmax_e32m4();
     vint32m4_t _v32 = vundefined_i32m4();
-    _v32 = vset_v_i32m1_i32m4 (_v32, 0, _v0_32);
-    _v32 = vset_v_i32m1_i32m4 (_v32, 1, _v1_32);
-    _v32 = vset_v_i32m1_i32m4 (_v32, 2, _v2_32);
-    _v32 = vset_v_i32m1_i32m4 (_v32, 3, _v3_32);
+    _v32 = vset_v_i32m1_i32m4(_v32, 0, _v0_32);
+    _v32 = vset_v_i32m1_i32m4(_v32, 1, _v1_32);
+    _v32 = vset_v_i32m1_i32m4(_v32, 2, _v2_32);
+    _v32 = vset_v_i32m1_i32m4(_v32, 3, _v3_32);
 
     vint16m2_t _v16 = vnclip_wx_i16m2(_v32, 0, vl);
     vint8m1_t _v8 = vnclip_wx_i8m1(_v16, 0, vl);
 
     vint32m4_t _v32_leaky = vundefined_i32m4();
-    _v32_leaky = vset_v_i32m1_i32m4 (_v32_leaky, 0, _v0_32_leaky);
-    _v32_leaky = vset_v_i32m1_i32m4 (_v32_leaky, 1, _v1_32_leaky);
-    _v32_leaky = vset_v_i32m1_i32m4 (_v32_leaky, 2, _v2_32_leaky);
-    _v32_leaky = vset_v_i32m1_i32m4 (_v32_leaky, 3, _v3_32_leaky);
+    _v32_leaky = vset_v_i32m1_i32m4(_v32_leaky, 0, _v0_32_leaky);
+    _v32_leaky = vset_v_i32m1_i32m4(_v32_leaky, 1, _v1_32_leaky);
+    _v32_leaky = vset_v_i32m1_i32m4(_v32_leaky, 2, _v2_32_leaky);
+    _v32_leaky = vset_v_i32m1_i32m4(_v32_leaky, 3, _v3_32_leaky);
 
     vint16m2_t _v16_leaky = vnclip_wx_i16m2(_v32_leaky, 0, vl);
     vint8m1_t _v8_leaky = vnclip_wx_i8m1(_v16_leaky, 0, vl);
 
     _v8 = vmax_vv_i8m1(_v8, _v8_leaky, vl);
     return _v8;
-}    
-
+}
 
 static inline vfloat32m8_t vle32_v_f32m8_f32m1(const float* ptr)
 {

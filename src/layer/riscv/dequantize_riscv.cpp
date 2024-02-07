@@ -28,20 +28,12 @@ Dequantize_riscv::Dequantize_riscv()
 {
 #if __riscv_vector
     support_packing = true;
-#if NCNN_ARM82
-    support_fp16_storage = cpu_support_arm_asimdhp();
-#endif
 #endif // __riscv_vector
 
-#if NCNN_BF16
-    support_bf16_storage = true;
-#endif
 }
 
 int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Option& opt) const
 {
-    // assert bottom_blob.elembits() == 32
-
     int dims = bottom_blob.dims;
     int elempack = bottom_blob.elempack;
 
@@ -59,98 +51,198 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
 
             if (scale_data_size == 1)
             {
-                float32x4_t _scale = vdupq_n_f32(scale_data[0]);
+                float _scale = scale[0];
+                // vfloat32m1_t _scale = vfmv_v_f_f32m1(scale[0], vl);
+                // float32x4_t _scale = vdupq_n_f32(scale_data[0]);
 
                 if (bias_data_size == 0)
                 {
-                    #pragma omp parallel for num_threads(opt.num_threads)
-                    for (int i = 0; i < outw; i++)
-                    {
-                        const int* intptr = (const int*)bottom_blob + i * 4;
-                        float* ptr = (float*)top_blob + i * 4;
-
-                        float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
-                        _v = vmulq_f32(_v, _scale);
-                        vst1q_f32(ptr, _v);
+                    // #pragma omp parallel for num_threads(opt.num_threads)
+                    int n = outw * 4;
+                    int offset = 0;
+                    while (n > 0) {
+                        vl = vsetvl_e32m8(n);
+                        const int* intptr = (const int*)bottom_blob + offset;
+                        float* ptr = (float*)top_blob + offset;
+                        vfloat32m8_t _v = vfcvt_f_x_v_i32m8(vle32_v_i32m8(intptr, vl), vl);
+                        _v = vfmul_vf_f32m8(_v, _scale, vl);
+                        vse32_v_f32m8(ptr, _v, vl);
+                        offset += vl;
+                        n -= vl;
                     }
+                    // for (int i = 0; i < outw; i++)
+                    // {
+                    //     const int* intptr = (const int*)bottom_blob + i * 4;
+                    //     float* ptr = (float*)top_blob + i * 4;
+
+                    //     vfloat32m1_t _v = vfcvt_f_x_v_i32m1(vle32_v_i32m1(intptr, vl), vl);
+                    //     _v = vfmul_vv_f32m1(_v, _scale, vl);
+                    //     vse32_v_f32m1(ptr, _v, vl);
+                    //     // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
+                    //     // _v = vmulq_f32(_v, _scale);
+                    //     // vst1q_f32(ptr, _v);
+                    // }
                 }
                 else if (bias_data_size == 1)
                 {
-                    float32x4_t _bias = vdupq_n_f32(bias_data[0]);
+                    int n = outw * 4;
+                    int offset = 0;
+                    while (n > 0) {
+                        vl = vsetvl_e32m8(n);
+                        const int* intptr = (const int*)bottom_blob + offset;
+                        float* ptr = (float*)top_blob + offset;
+                        // vfloat32m8_t _v = vle32_v_i32m8(intptr, vl);
+                        vfloat32m8_t _bias = vfmv_v_f_f32m8(bias_data[0], vl);
+                        vfloat32m8_t _v = vfcvt_f_x_v_i32m8(vle32_v_i32m8(intptr, vl), vl);
+                        _v = vfmadd_vf_f32m8(_bias, _scale, _v, vl);
+                        vse32_v_f32m8(ptr, _v, vl);
+                        offset += vl;
+                        n -= vl;
 
-                    #pragma omp parallel for num_threads(opt.num_threads)
-                    for (int i = 0; i < outw; i++)
-                    {
-                        const int* intptr = (const int*)bottom_blob + i * 4;
-                        float* ptr = (float*)top_blob + i * 4;
-
-                        float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
-                        _v = vfmaq_f32(_bias, _v, _scale);
-
-                        vst1q_f32(ptr, _v);
                     }
+                    // vfloat32m1_t _bias = vfmv_v_f_f32m1(bias_data[0], vl);
+                    // // float32x4_t _bias = vdupq_n_f32(bias_data[0]);
+
+                    // #pragma omp parallel for num_threads(opt.num_threads)
+                    // for (int i = 0; i < outw; i++)
+                    // {
+                    //     const int* intptr = (const int*)bottom_blob + i * 4;
+                    //     float* ptr = (float*)top_blob + i * 4;
+
+                    //     vfloat32m1_t _v = vfcvt_f_x_v_i32m1(vle32_v_i32m1(intptr, vl), vl);
+                    //     _v = vfmadd_vv_f32m1(_bias, _scale, _v, vl);
+                    //     vse32_v_f32m1(ptr, _v, vl);
+                    //     // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
+                    //     // _v = vfmaq_f32(_bias, _v, _scale);
+
+                    //     // vst1q_f32(ptr, _v);
+                    // }
                 }
                 else
                 {
-                    #pragma omp parallel for num_threads(opt.num_threads)
-                    for (int i = 0; i < outw; i++)
-                    {
-                        const int* intptr = (const int*)bottom_blob + i * 4;
-                        float* ptr = (float*)top_blob + i * 4;
-
-                        float32x4_t _bias = vld1q_f32((const float*)bias_data + i * 4);
-                        float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
-                        _v = vfmaq_f32(_bias, _v, _scale);
-                        vst1q_f32(ptr, _v);
+                    // #pragma omp parallel for num_threads(opt.num_threads)
+                    int n = outw * 4;
+                    int offset = 0;
+                    while (n > 0) {
+                        vl = vsetvl_e32m8(n);
+                        const int* intptr = (const int*)bottom_blob + offset;
+                        float* ptr = (float*)top_blob + offset;
+                        vfloat32m8_t _bias = vle32_v_f32m8(bias_data + offset, vl);
+                        vfloat32m8_t _v = vfcvt_f_x_v_i32m8(vle32_v_i32m8(intptr, vl), vl);
+                        _v = vfmadd_vv_f32m8(_bias, _scale, _v, vl);
+                        vse32_v_f32m8(ptr, _v, vl);
+                        offset += vl;
+                        n -= vl;
                     }
+                    // for (int i = 0; i < outw; i++)
+                    // {
+                    //     const int* intptr = (const int*)bottom_blob + i * 4;
+                    //     float* ptr = (float*)top_blob + i * 4;
+
+
+                    //     float32x4_t _bias = vld1q_f32((const float*)bias_data + i * 4);
+                    //     float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
+                    //     _v = vfmaq_f32(_bias, _v, _scale);
+                    //     vst1q_f32(ptr, _v);
+                    // }
                 }
             }
             else
             {
                 if (bias_data_size == 0)
                 {
-                    #pragma omp parallel for num_threads(opt.num_threads)
-                    for (int i = 0; i < outw; i++)
-                    {
-                        const int* intptr = (const int*)bottom_blob + i * 4;
-                        float* ptr = (float*)top_blob + i * 4;
+                    // #pragma omp parallel for num_threads(opt.num_threads)
+                    int n = outw * 4;
+                    int offset = 0;
 
-                        float32x4_t _scale = vld1q_f32((const float*)scale_data + i * 4);
-                        float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
-                        _v = vmulq_f32(_v, _scale);
-                        vst1q_f32(ptr, _v);
+                    while (n > 0) {
+                        vl = vsetvl_e32m8(n);
+                        const int* intptr = (const int*)bottom_blob + offset;
+                        float* ptr = (float*)top_blob + offset;
+
+                        vfloat32m8_t _scale = vle32_v_f32m8(scale_data + offset, vl);
+                        vfloat32m8_t _v = vfcvt_f_x_v_i32m8(vle32_v_i32m8(intptr, vl), vl);
+                        _v = vfmul_vv_f32m8(_v, _scale, vl);
+                        vse32_v_f32m8(ptr, _v, vl);
+
+                        offset += vl;
+                        n -= vl;
                     }
+                    // for (int i = 0; i < outw; i++)
+                    // {
+                    //     const int* intptr = (const int*)bottom_blob + i * 4;
+                    //     float* ptr = (float*)top_blob + i * 4;
+
+                    //     float32x4_t _scale = vld1q_f32((const float*)scale_data + i * 4);
+                    //     float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
+                    //     _v = vmulq_f32(_v, _scale);
+                    //     vst1q_f32(ptr, _v);
+                    // }
                 }
                 else if (bias_data_size == 1)
                 {
-                    float32x4_t _bias = vdupq_n_f32(bias_data[0]);
+                    int n = outw * 4;
+                    int offset = 0;
 
-                    #pragma omp parallel for num_threads(opt.num_threads)
-                    for (int i = 0; i < outw; i++)
-                    {
-                        const int* intptr = (const int*)bottom_blob + i * 4;
-                        float* ptr = (float*)top_blob + i * 4;
+                    while (n > 0) {
+                        vl = vsetvl_e32m8(n);
+                        const int* intptr = (const int*)bottom_blob + offset;
+                        float* ptr = (float*)top_blob + offset;
 
-                        float32x4_t _scale = vld1q_f32((const float*)scale_data + i * 4);
-                        float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
-                        _v = vfmaq_f32(_bias, _v, _scale);
-                        vst1q_f32(ptr, _v);
+                        vfloat32m8_t _scale = vle32_v_f32m8(scale_data + offset, vl);
+                        vfloat32m8_t _bias = vfmv_v_f_f32m8(bias_data[0], vl);
+                        vfloat32m8_t _v = vfcvt_f_x_v_i32m8(vle32_v_i32m8(intptr, vl), vl);
+                        _v = vfmadd_vv_f32m8(_bias, _scale, _v, vl);
+                        vse32_v_f32m8(ptr, _v, vl);
+                        offset += vl;
+                        n -= vl;
                     }
+
+                    // float32x4_t _bias = vdupq_n_f32(bias_data[0]);
+
+                    // #pragma omp parallel for num_threads(opt.num_threads)
+                    // for (int i = 0; i < outw; i++)
+                    // {
+                    //     const int* intptr = (const int*)bottom_blob + i * 4;
+                    //     float* ptr = (float*)top_blob + i * 4;
+
+                    //     float32x4_t _scale = vld1q_f32((const float*)scale_data + i * 4);
+                    //     float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
+                    //     _v = vfmaq_f32(_bias, _v, _scale);
+                    //     vst1q_f32(ptr, _v);
+                    // }
                 }
                 else
                 {
-                    #pragma omp parallel for num_threads(opt.num_threads)
-                    for (int i = 0; i < outw; i++)
-                    {
-                        const int* intptr = (const int*)bottom_blob + i * 4;
-                        float* ptr = (float*)top_blob + i * 4;
+                    int n = outw * 4;
+                    int offset = 0;
 
-                        float32x4_t _scale = vld1q_f32((const float*)scale_data + i * 4);
-                        float32x4_t _bias = vld1q_f32((const float*)bias_data + i * 4);
-                        float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
-                        _v = vfmaq_f32(_bias, _v, _scale);
-                        vst1q_f32(ptr, _v);
+                    while (n > 0) {
+                        vl = vsetvl_e32m8(n);
+                        const int* intptr = (const int*)bottom_blob + offset;
+                        float* ptr = (float*)top_blob + offset;
+
+                        vfloat32m8_t _scale = vle32_v_f32m8(scale_data + offset, vl);
+                        vfloat32m8_t _bias = vle32_v_f32m8(bias_data + offset, vl);
+                        vfloat32m8_t _v = vfcvt_f_x_v_i32m8(vle32_v_i32m8(intptr, vl), vl);
+                        _v = vfmadd_vv_f32m8(_bias, _scale, _v, vl);
+                        vse32_v_f32m8(ptr, _v, vl);
+                        offset += vl;
+                        n -= vl;
                     }
+
+                    // #pragma omp parallel for num_threads(opt.num_threads)
+                    // for (int i = 0; i < outw; i++)
+                    // {
+                    //     const int* intptr = (const int*)bottom_blob + i * 4;
+                    //     float* ptr = (float*)top_blob + i * 4;
+
+                    //     float32x4_t _scale = vld1q_f32((const float*)scale_data + i * 4);
+                    //     float32x4_t _bias = vld1q_f32((const float*)bias_data + i * 4);
+                    //     float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
+                    //     _v = vfmaq_f32(_bias, _v, _scale);
+                    //     vst1q_f32(ptr, _v);
+                    // }
                 }
             }
         }
@@ -160,6 +252,7 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
             int w = bottom_blob.w;
             int h = bottom_blob.h;
             int outh = h * 2;
+            vl = vsetvlmax_e32m1();
 
             top_blob.create(w, outh, (size_t)16u, 4, opt.blob_allocator);
             if (top_blob.empty())
@@ -174,18 +267,26 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                     float* ptr0 = top_blob.row(i * 2);
                     float* ptr1 = top_blob.row(i * 2 + 1);
 
-                    float32x4_t _scale0 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + i * 8);
-                    float32x4_t _scale1 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + i * 8 + 4);
+                    vfloat32m1_t _scale0 = scale_data_size == 1 ? vfmv_v_f_f32m1(scale_data[0], vl) : vle32_v_f32m1(scale_data + i * 8, vl);
+                    vfloat32m1_t _scale1 = scale_data_size == 1 ? vfmv_v_f_f32m1(scale_data[0], vl) : vle32_v_f32m1(scale_data + i * 8 + 4, vl);
+
+                    // float32x4_t _scale0 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + i * 8);
+                    // float32x4_t _scale1 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + i * 8 + 4);
 
                     for (int j = 0; j < w; j++)
                     {
-                        float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                        float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
-                        _v0 = vmulq_f32(_v0, _scale0);
-                        _v1 = vmulq_f32(_v1, _scale1);
-                        vst1q_f32(ptr0, _v0);
-                        vst1q_f32(ptr1, _v1);
-
+                        vfloat32m1_t _v0 = vfcvt_f_x_v_i32m1(vle32_v_i32m1(intptr, vl), vl);
+                        vfloat32m1_t _v1 = vfcvt_f_x_v_i32m1(vle32_v_i32m1(intptr + 4, vl), vl);
+                        _v0 = vfmul_vf_f32m1(_v0, _scale0, vl);
+                        _v1 = vfmul_vf_f32m1(_v1, _scale1, vl);
+                        vse32_v_f32m1(ptr0, _v0, vl);
+                        vse32_v_f32m1(ptr1, _v1, vl);
+                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
+                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
+                        // _v0 = vmulq_f32(_v0, _scale0);
+                        // _v1 = vmulq_f32(_v1, _scale1);
+                        // vst1q_f32(ptr0, _v0);
+                        // vst1q_f32(ptr1, _v1);
                         intptr += 8;
                         ptr0 += 4;
                         ptr1 += 4;
@@ -201,20 +302,31 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                     float* ptr0 = top_blob.row(i * 2);
                     float* ptr1 = top_blob.row(i * 2 + 1);
 
-                    float32x4_t _scale0 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + i * 8);
-                    float32x4_t _scale1 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + i * 8 + 4);
-                    float32x4_t _bias0 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + i * 8);
-                    float32x4_t _bias1 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + i * 8 + 4);
+                    vfloat32m1_t _scale0 = scale_data_size == 1 ? vfmv_v_f_f32m1(scale_data[0], vl) : vle32_v_f32m1(scale_data + i * 8, vl);
+                    vfloat32m1_t _scale1 = scale_data_size == 1 ? vfmv_v_f_f32m1(scale_data[0], vl) : vle32_v_f32m1(scale_data + i * 8 + 4, vl);
+                    vfloat32m1_t _bias0 = bias_data_size == 1 ? vfmv_v_f_f32m1(bias_data[0], vl) : vle32_v_f32m1(bias_data + i * 8, vl);
+                    vfloat32m1_t _bias1 = bias_data_size == 1 ? vfmv_v_f_f32m1(bias_data[0], vl) : vle32_v_f32m1(bias_data + i * 8 + 4, vl);
+
+                    // float32x4_t _scale0 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + i * 8);
+                    // float32x4_t _scale1 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + i * 8 + 4);
+                    // float32x4_t _bias0 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + i * 8);
+                    // float32x4_t _bias1 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + i * 8 + 4);
 
                     for (int j = 0; j < w; j++)
                     {
-                        float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                        float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
-                        _v0 = vfmaq_f32(_bias0, _v0, _scale0);
-                        _v1 = vfmaq_f32(_bias1, _v1, _scale1);
-                        vst1q_f32(ptr0, _v0);
-                        vst1q_f32(ptr1, _v1);
+                        vfloat32m1_t _v0 = vfcvt_f_x_v_i32m1(vle32_v_i32m1(intptr, vl), vl);
+                        vfloat32m1_t _v1 = vfcvt_f_x_v_i32m1(vle32_v_i32m1(intptr + 4, vl), vl);
+                        _v0 = vfmadd_vv_f32m1(_bias0, _v0, _scale0, vl);
+                        _v1 = vfmadd_vv_f32m1(_bias1, _v1, _scale1, vl);
+                        vse32_v_f32m1(ptr0, _v0, vl);
+                        vse32_v_f32m1(ptr1, _v1, vl);
 
+                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
+                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
+                        // _v0 = vfmaq_f32(_bias0, _v0, _scale0);
+                        // _v1 = vfmaq_f32(_bias1, _v1, _scale1);
+                        // vst1q_f32(ptr0, _v0);
+                        // vst1q_f32(ptr1, _v1);
                         intptr += 8;
                         ptr0 += 4;
                         ptr1 += 4;
@@ -244,24 +356,40 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                     float* ptr0 = top_blob.channel(q * 2);
                     float* ptr1 = top_blob.channel(q * 2 + 1);
 
-                    float32x4_t _scale0 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + q * 8);
-                    float32x4_t _scale1 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + q * 8 + 4);
+                    vfloat32m1_t _scale0 = scale_data_size == 1 ? vfmv_v_f_f32m1(scale_data[0], vl) : vle32_v_f32m1(scale_data + q * 8, vl);
+                    vfloat32m1_t _scale1 = scale_data_size == 1 ? vfmv_v_f_f32m1(scale_data[0], vl) : vle32_v_f32m1(scale_data + q * 8 + 4, vl);
+                    // float32x4_t _scale0 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + q * 8);
+                    // float32x4_t _scale1 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + q * 8 + 4);
 
                     int i = 0;
                     for (; i + 1 < size; i += 2)
                     {
-                        float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                        float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
-                        float32x4_t _v2 = vcvtq_f32_s32(vld1q_s32(intptr + 8));
-                        float32x4_t _v3 = vcvtq_f32_s32(vld1q_s32(intptr + 12));
-                        _v0 = vmulq_f32(_v0, _scale0);
-                        _v1 = vmulq_f32(_v1, _scale1);
-                        _v2 = vmulq_f32(_v2, _scale0);
-                        _v3 = vmulq_f32(_v3, _scale1);
-                        vst1q_f32(ptr0, _v0);
-                        vst1q_f32(ptr0 + 4, _v2);
-                        vst1q_f32(ptr1, _v1);
-                        vst1q_f32(ptr1 + 4, _v3);
+                        vfloat32m1_t _v0 = vfcvt_f_x_v_i32m1(vle32_v_i32m1(intptr, vl), vl);
+                        vfloat32m1_t _v1 = vfcvt_f_x_v_i32m1(vle32_v_i32m1(intptr + 4, vl), vl);
+                        vfloat32m1_t _v2 = vfcvt_f_x_v_i32m1(vle32_v_i32m1(intptr + 8, vl), vl);
+                        vfloat32m1_t _v3 = vfcvt_f_x_v_i32m1(vle32_v_i32m1(intptr + 12, vl), vl);
+
+                        _v0 = vfmul_vf_f32m1(_v0, _scale0, vl);
+                        _v1 = vfmul_vf_f32m1(_v1, _scale1, vl);
+                        _v2 = vfmul_vf_f32m1(_v2, _scale0, vl);
+                        _v3 = vfmul_vf_f32m1(_v3, _scale1, vl);
+
+                        vse32_v_f32m1(ptr0, _v0, vl);
+                        vse32_v_f32m1(ptr0 + 4, _v2, vl);
+                        vse32_v_f32m1(ptr1, _v1, vl);
+                        vse32_v_f32m1(ptr1 + 4, _v3, vl);
+                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
+                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
+                        // float32x4_t _v2 = vcvtq_f32_s32(vld1q_s32(intptr + 8));
+                        // float32x4_t _v3 = vcvtq_f32_s32(vld1q_s32(intptr + 12));
+                        // _v0 = vmulq_f32(_v0, _scale0);
+                        // _v1 = vmulq_f32(_v1, _scale1);
+                        // _v2 = vmulq_f32(_v2, _scale0);
+                        // _v3 = vmulq_f32(_v3, _scale1);
+                        // vst1q_f32(ptr0, _v0);
+                        // vst1q_f32(ptr0 + 4, _v2);
+                        // vst1q_f32(ptr1, _v1);
+                        // vst1q_f32(ptr1 + 4, _v3);
 
                         intptr += 16;
                         ptr0 += 8;
@@ -269,12 +397,21 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                     }
                     for (; i < size; i++)
                     {
-                        float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                        float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
-                        _v0 = vmulq_f32(_v0, _scale0);
-                        _v1 = vmulq_f32(_v1, _scale1);
-                        vst1q_f32(ptr0, _v0);
-                        vst1q_f32(ptr1, _v1);
+                        vfloat32m1_t _v0 = vfcvt_f_x_v_i32m1(vle32_v_i32m1(intptr, vl), vl);
+                        vfloat32m1_t _v1 = vfcvt_f_x_v_i32m1(vle32_v_i32m1(intptr + 4, vl), vl);
+
+                        _v0 = vfmul_vf_f32m1(_v0, _scale0, vl);
+                        _v1 = vfmul_vf_f32m1(_v1, _scale1, vl);
+
+                        vse32_v_f32m1(ptr0, _v0, vl);
+                        vse32_v_f32m1(ptr1, _v1, vl);
+
+                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
+                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
+                        // _v0 = vmulq_f32(_v0, _scale0);
+                        // _v1 = vmulq_f32(_v1, _scale1);
+                        // vst1q_f32(ptr0, _v0);
+                        // vst1q_f32(ptr1, _v1);
 
                         intptr += 8;
                         ptr0 += 4;
@@ -291,26 +428,36 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                     float* ptr0 = top_blob.channel(q * 2);
                     float* ptr1 = top_blob.channel(q * 2 + 1);
 
-                    float32x4_t _scale0 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + q * 8);
-                    float32x4_t _scale1 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + q * 8 + 4);
-                    float32x4_t _bias0 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + q * 8);
-                    float32x4_t _bias1 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + q * 8 + 4);
+                    vfloat32m1_t _scale0 = scale_data_size == 1 ? vfmv_v_f_f32m1(scale_data[0], vl) : vle32_v_f32m1(scale_data + q * 8, vl);
+                    vfloat32m1_t _scale1 = scale_data_size == 1 ? vfmv_v_f_f32m1(scale_data[0], vl) : vle32_v_f32m1(scale_data + q * 8 + 4, vl);
+                    vfloat32m1_t _bias0 = bias_data_size == 1 ? vfmv_v_f_f32m1(bias_data[0], vl) : vle32_v_f32m1(bias_data + q * 8, vl);
+                    vfloat32m1_t _bias1 = bias_data_size == 1 ? vfmv_v_f_f32m1(bias_data[0], vl) : vle32_v_f32m1(bias_data + q * 8 + 4, vl);
+
+                    // float32x4_t _scale0 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + q * 8);
+                    // float32x4_t _scale1 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + q * 8 + 4);
+                    // float32x4_t _bias0 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + q * 8);
+                    // float32x4_t _bias1 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + q * 8 + 4);
 
                     int i = 0;
                     for (; i + 1 < size; i += 2)
                     {
-                        float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                        float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
-                        float32x4_t _v2 = vcvtq_f32_s32(vld1q_s32(intptr + 8));
-                        float32x4_t _v3 = vcvtq_f32_s32(vld1q_s32(intptr + 12));
-                        _v0 = vfmaq_f32(_bias0, _v0, _scale0);
-                        _v1 = vfmaq_f32(_bias1, _v1, _scale1);
-                        _v2 = vfmaq_f32(_bias0, _v2, _scale0);
-                        _v3 = vfmaq_f32(_bias1, _v3, _scale1);
-                        vst1q_f32(ptr0, _v0);
-                        vst1q_f32(ptr0 + 4, _v2);
-                        vst1q_f32(ptr1, _v1);
-                        vst1q_f32(ptr1 + 4, _v3);
+                        vfloat32m1_t _v0 = vfcvt_f_x_v_i32m1(vle32_v_i32m1(intptr, vl), vl);
+                        vfloat32m1_t _v1 = vfcvt_f_x_v_i32m1(vle32_v_i32m1(intptr + 4, vl), vl);
+                        vfloat32m1_t _v2 = vfcvt_f_x_v_i32m1(vle32_v_i32m1(intptr + 8, vl), vl);
+                        vfloat32m1_t _v3 = vfcvt_f_x_v_i32m1(vle32_v_i32m1(intptr + 12, vl), vl);
+                        
+                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
+                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
+                        // float32x4_t _v2 = vcvtq_f32_s32(vld1q_s32(intptr + 8));
+                        // float32x4_t _v3 = vcvtq_f32_s32(vld1q_s32(intptr + 12));
+                        // _v0 = vfmaq_f32(_bias0, _v0, _scale0);
+                        // _v1 = vfmaq_f32(_bias1, _v1, _scale1);
+                        // _v2 = vfmaq_f32(_bias0, _v2, _scale0);
+                        // _v3 = vfmaq_f32(_bias1, _v3, _scale1);
+                        // vst1q_f32(ptr0, _v0);
+                        // vst1q_f32(ptr0 + 4, _v2);
+                        // vst1q_f32(ptr1, _v1);
+                        // vst1q_f32(ptr1 + 4, _v3);
 
                         intptr += 16;
                         ptr0 += 8;

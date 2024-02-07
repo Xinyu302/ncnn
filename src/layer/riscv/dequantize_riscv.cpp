@@ -202,7 +202,7 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                     const int* intptr = bottom_blob.row<const int>(i);
                     float* ptr0 = top_blob.row(i * 2);
                     float* ptr1 = top_blob.row(i * 2 + 1);
-                    
+
                     vl = 4;
                     vfloat32m1_t _scale0 = scale_data_size == 1 ? vfmv_v_f_f32m1(scale_data[0], vl) : vle32_v_f32m1((const float*)scale_data + i * 8, vl);
                     vfloat32m1_t _scale1 = scale_data_size == 1 ? vfmv_v_f_f32m1(scale_data[0], vl) : vle32_v_f32m1((const float*)scale_data + i * 8 + 4, vl);
@@ -386,7 +386,6 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
 
             if (scale_data_size == 1)
             {
-
                 if (bias_data_size == 0)
                 {
                     int n = w * 4;
@@ -432,7 +431,8 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         vl = vsetvl_e32m8(n);
                         const int* intptr = (const int*)bottom_blob + offset;
                         float* ptr = (float*)top_blob + offset;
-                        vfloat32m8_t _scale = vfmv_v_f_f32m8(scale_data[0], vl);                        vfloat32m8_t _bias = vle32_v_f32m8((const float*)bias_data + offset, vl);
+                        vfloat32m8_t _scale = vfmv_v_f_f32m8(scale_data[0], vl);
+                        vfloat32m8_t _bias = vle32_v_f32m8((const float*)bias_data + offset, vl);
                         vfloat32m8_t _v = vfcvt_f_x_v_f32m8(vle32_v_i32m8(intptr, vl), vl);
                         _v = vfmadd_vv_f32m8(_scale, _v, _bias, vl);
                         vse32_v_f32m8(ptr, _v, vl);
@@ -854,11 +854,11 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                     offset += vl;
                     n -= vl;
                 }
-#endif // __riscv_vector
-                // for (; i < size; i++)
-                // {
-                //     *ptr++ = *intptr++ * scale;
-                // }
+#endif // __riscv_vector               \
+// for (; i < size; i++)           \
+// {                               \
+//     *ptr++ = *intptr++ * scale; \
+// }
             }
         }
         else
@@ -888,11 +888,11 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                     offset += vl;
                     n -= vl;
                 }
-#endif // __riscv_vector
-                // for (; i < size; i++)
-                // {
-                //     *ptr++ = *intptr++ * scale + bias;
-                // }
+#endif // __riscv_vector                      \
+// for (; i < size; i++)                  \
+// {                                      \
+//     *ptr++ = *intptr++ * scale + bias; \
+// }
             }
         }
     }

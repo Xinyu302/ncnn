@@ -31,6 +31,18 @@ Dequantize_riscv::Dequantize_riscv()
 #endif // __riscv_vector
 }
 
+static void print_vfloat32m8(vfloat32m8_t v, int n)
+{
+    float* ptr = (float*)malloc(n * sizeof(float));
+    vse32_v_f32m8(ptr, v, n);
+    for (int i = 0; i < n; i++)
+    {
+        fprintf(stderr, "%f ", ptr[i]);
+    }
+    fprintf(stderr, "\n");
+    free(ptr);
+}
+
 int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Option& opt) const
 {
     int vl;
@@ -270,7 +282,8 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                     const int* intptr = bottom_blob.row<const int>(i);
                     float* ptr0 = top_blob.row(i * 2);
                     float* ptr1 = top_blob.row(i * 2 + 1);
-
+                    
+                    vl = 4;
                     vfloat32m1_t _scale0 = scale_data_size == 1 ? vfmv_v_f_f32m1(scale_data[0], vl) : vle32_v_f32m1((const float*)scale_data + i * 8, vl);
                     vfloat32m1_t _scale1 = scale_data_size == 1 ? vfmv_v_f_f32m1(scale_data[0], vl) : vle32_v_f32m1((const float*)scale_data + i * 8 + 4, vl);
 
@@ -306,6 +319,7 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                     float* ptr0 = top_blob.row(i * 2);
                     float* ptr1 = top_blob.row(i * 2 + 1);
 
+                    vl = 4;
                     vfloat32m1_t _scale0 = scale_data_size == 1 ? vfmv_v_f_f32m1(scale_data[0], vl) : vle32_v_f32m1((const float*)scale_data + i * 8, vl);
                     vfloat32m1_t _scale1 = scale_data_size == 1 ? vfmv_v_f_f32m1(scale_data[0], vl) : vle32_v_f32m1((const float*)scale_data + i * 8 + 4, vl);
                     vfloat32m1_t _bias0 = bias_data_size == 1 ? vfmv_v_f_f32m1(bias_data[0], vl) : vle32_v_f32m1((const float*)bias_data + i * 8, vl);
@@ -341,6 +355,7 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
 
         if (dims == 3)
         {
+            fprintf(stderr, "in 346\n");
             int w = bottom_blob.w;
             int h = bottom_blob.h;
             int channels = bottom_blob.c;
@@ -360,6 +375,7 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                     float* ptr0 = top_blob.channel(q * 2);
                     float* ptr1 = top_blob.channel(q * 2 + 1);
 
+                    vl = 4;
                     vfloat32m1_t _scale0 = scale_data_size == 1 ? vfmv_v_f_f32m1(scale_data[0], vl) : vle32_v_f32m1((const float*)scale_data + q * 8, vl);
                     vfloat32m1_t _scale1 = scale_data_size == 1 ? vfmv_v_f_f32m1(scale_data[0], vl) : vle32_v_f32m1((const float*)scale_data + q * 8 + 4, vl);
                     // float32x4_t _scale0 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + q * 8);
@@ -431,6 +447,7 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                     const int* intptr = bottom_blob.channel(q);
                     float* ptr0 = top_blob.channel(q * 2);
                     float* ptr1 = top_blob.channel(q * 2 + 1);
+                    vl = 4;
 
                     vfloat32m1_t _scale0 = scale_data_size == 1 ? vfmv_v_f_f32m1(scale_data[0], vl) : vle32_v_f32m1((const float*)scale_data + q * 8, vl);
                     vfloat32m1_t _scale1 = scale_data_size == 1 ? vfmv_v_f_f32m1(scale_data[0], vl) : vle32_v_f32m1((const float*)scale_data + q * 8 + 4, vl);
@@ -726,14 +743,14 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                     vfloat32m1_t _scale_m1 = scale_data_size == 1 ? vfmv_v_f_f32m1(scale_data[0], vl) : vle32_v_f32m1((const float*)scale_data + i * 4, vl);
                     // vfloat32m8_t _scale = vlmul_ext_v_f32m1_f32m8(_scale_m1);
                     vfloat32m8_t _scale = vundefined_f32m8();
-                    vset_v_f32m1_f32m8(_scale, 0, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 1, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 2, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 3, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 4, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 5, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 6, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 7, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 0, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 1, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 2, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 3, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 4, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 5, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 6, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 7, _scale_m1);
 
                     while (n > 0)
                     {
@@ -774,24 +791,24 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                     vfloat32m1_t _bias_m1 = bias_data_size == 1 ? vfmv_v_f_f32m1(bias_data[0], vl) : vle32_v_f32m1((const float*)bias_data + i * 4, vl);
 
                     vfloat32m8_t _scale = vundefined_f32m8();
-                    vset_v_f32m1_f32m8(_scale, 0, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 1, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 2, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 3, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 4, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 5, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 6, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 7, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 0, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 1, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 2, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 3, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 4, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 5, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 6, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 7, _scale_m1);
 
                     vfloat32m8_t _bias = vundefined_f32m8();
-                    vset_v_f32m1_f32m8(_bias, 0, _bias_m1);
-                    vset_v_f32m1_f32m8(_bias, 1, _bias_m1);
-                    vset_v_f32m1_f32m8(_bias, 2, _bias_m1);
-                    vset_v_f32m1_f32m8(_bias, 3, _bias_m1);
-                    vset_v_f32m1_f32m8(_bias, 4, _bias_m1);
-                    vset_v_f32m1_f32m8(_bias, 5, _bias_m1);
-                    vset_v_f32m1_f32m8(_bias, 6, _bias_m1);
-                    vset_v_f32m1_f32m8(_bias, 7, _bias_m1);
+                    _bias = vset_v_f32m1_f32m8(_bias, 0, _bias_m1);
+                    _bias = vset_v_f32m1_f32m8(_bias, 1, _bias_m1);
+                    _bias = vset_v_f32m1_f32m8(_bias, 2, _bias_m1);
+                    _bias = vset_v_f32m1_f32m8(_bias, 3, _bias_m1);
+                    _bias = vset_v_f32m1_f32m8(_bias, 4, _bias_m1);
+                    _bias = vset_v_f32m1_f32m8(_bias, 5, _bias_m1);
+                    _bias = vset_v_f32m1_f32m8(_bias, 6, _bias_m1);
+                    _bias = vset_v_f32m1_f32m8(_bias, 7, _bias_m1);
 
                     int n = w * 4;
                     int offset = 0;
@@ -823,6 +840,7 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
 
         if (dims == 3)
         {
+            fprintf(stderr, "in 831\n");
             int w = bottom_blob.w;
             int h = bottom_blob.h;
             int channels = bottom_blob.c;
@@ -840,17 +858,17 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                     const int* intptr = bottom_blob.channel(q);
                     float* ptr = top_blob.channel(q);
                     // float32x4_t _scale = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + q * 4);
-                    
+                    vl = 4;
                     vfloat32m1_t _scale_m1 = scale_data_size == 1 ? vfmv_v_f_f32m1(scale_data[0], vl) : vle32_v_f32m1((const float*)scale_data + q * 4, vl);
                     vfloat32m8_t _scale = vundefined_f32m8();
-                    vset_v_f32m1_f32m8(_scale, 0, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 1, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 2, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 3, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 4, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 5, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 6, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 7, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 0, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 1, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 2, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 3, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 4, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 5, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 6, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 7, _scale_m1);
 
                     int n = size * 4;
                     int offset = 0;
@@ -901,28 +919,29 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                     // float32x4_t _scale = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + q * 4);
                     // float32x4_t _bias = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + q * 4);
 
+                    vl = 4;
                     vfloat32m1_t _scale_m1 = scale_data_size == 1 ? vfmv_v_f_f32m1(scale_data[0], vl) : vle32_v_f32m1((const float*)scale_data + q * 4, vl);
                     vfloat32m1_t _bias_m1 = bias_data_size == 1 ? vfmv_v_f_f32m1(bias_data[0], vl) : vle32_v_f32m1((const float*)bias_data + q * 4, vl);
 
                     vfloat32m8_t _scale = vundefined_f32m8();
-                    vset_v_f32m1_f32m8(_scale, 0, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 1, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 2, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 3, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 4, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 5, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 6, _scale_m1);
-                    vset_v_f32m1_f32m8(_scale, 7, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 0, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 1, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 2, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 3, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 4, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 5, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 6, _scale_m1);
+                    _scale = vset_v_f32m1_f32m8(_scale, 7, _scale_m1);
 
                     vfloat32m8_t _bias = vundefined_f32m8();
-                    vset_v_f32m1_f32m8(_bias, 0, _bias_m1);
-                    vset_v_f32m1_f32m8(_bias, 1, _bias_m1);
-                    vset_v_f32m1_f32m8(_bias, 2, _bias_m1);
-                    vset_v_f32m1_f32m8(_bias, 3, _bias_m1);
-                    vset_v_f32m1_f32m8(_bias, 4, _bias_m1);
-                    vset_v_f32m1_f32m8(_bias, 5, _bias_m1);
-                    vset_v_f32m1_f32m8(_bias, 6, _bias_m1);
-                    vset_v_f32m1_f32m8(_bias, 7, _bias_m1);
+                    _bias = vset_v_f32m1_f32m8(_bias, 0, _bias_m1);
+                    _bias = vset_v_f32m1_f32m8(_bias, 1, _bias_m1);
+                    _bias = vset_v_f32m1_f32m8(_bias, 2, _bias_m1);
+                    _bias = vset_v_f32m1_f32m8(_bias, 3, _bias_m1);
+                    _bias = vset_v_f32m1_f32m8(_bias, 4, _bias_m1);
+                    _bias = vset_v_f32m1_f32m8(_bias, 5, _bias_m1);
+                    _bias = vset_v_f32m1_f32m8(_bias, 6, _bias_m1);
+                    _bias = vset_v_f32m1_f32m8(_bias, 7, _bias_m1);
 
                     int n = size * 4;
                     int offset = 0;
@@ -1142,6 +1161,7 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
 
     if (dims == 3)
     {
+        fprintf(stderr, "in 1152\n");
         int w = bottom_blob.w;
         int h = bottom_blob.h;
         int channels = bottom_blob.c;

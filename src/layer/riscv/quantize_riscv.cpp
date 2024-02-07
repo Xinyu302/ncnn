@@ -35,7 +35,7 @@ Quantize_riscv::Quantize_riscv()
 int Quantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Option& opt) const
 {
     int vl = vsetvlmax_e32m1();
-    if (vl >= 4) 
+    if (vl >= 4)
         vl = 4;
     int elembits = bottom_blob.elembits();
 

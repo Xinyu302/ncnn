@@ -29,7 +29,6 @@ Dequantize_riscv::Dequantize_riscv()
 #if __riscv_vector
     support_packing = true;
 #endif // __riscv_vector
-
 }
 
 int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Option& opt) const
@@ -60,7 +59,8 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                     // #pragma omp parallel for num_threads(opt.num_threads)
                     int n = outw * 4;
                     int offset = 0;
-                    while (n > 0) {
+                    while (n > 0)
+                    {
                         vl = vsetvl_e32m8(n);
                         const int* intptr = (const int*)bottom_blob + offset;
                         float* ptr = (float*)top_blob + offset;
@@ -87,7 +87,8 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                 {
                     int n = outw * 4;
                     int offset = 0;
-                    while (n > 0) {
+                    while (n > 0)
+                    {
                         vl = vsetvl_e32m8(n);
                         const int* intptr = (const int*)bottom_blob + offset;
                         float* ptr = (float*)top_blob + offset;
@@ -98,7 +99,6 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         vse32_v_f32m8(ptr, _v, vl);
                         offset += vl;
                         n -= vl;
-
                     }
                     // vfloat32m1_t _bias = vfmv_v_f_f32m1(bias_data[0], vl);
                     // // float32x4_t _bias = vdupq_n_f32(bias_data[0]);
@@ -123,7 +123,8 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                     // #pragma omp parallel for num_threads(opt.num_threads)
                     int n = outw * 4;
                     int offset = 0;
-                    while (n > 0) {
+                    while (n > 0)
+                    {
                         vl = vsetvl_e32m8(n);
                         const int* intptr = (const int*)bottom_blob + offset;
                         float* ptr = (float*)top_blob + offset;
@@ -138,7 +139,6 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                     // {
                     //     const int* intptr = (const int*)bottom_blob + i * 4;
                     //     float* ptr = (float*)top_blob + i * 4;
-
 
                     //     float32x4_t _bias = vld1q_f32((const float*)bias_data + i * 4);
                     //     float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
@@ -155,7 +155,8 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                     int n = outw * 4;
                     int offset = 0;
 
-                    while (n > 0) {
+                    while (n > 0)
+                    {
                         vl = vsetvl_e32m8(n);
                         const int* intptr = (const int*)bottom_blob + offset;
                         float* ptr = (float*)top_blob + offset;
@@ -184,7 +185,8 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                     int n = outw * 4;
                     int offset = 0;
 
-                    while (n > 0) {
+                    while (n > 0)
+                    {
                         vl = vsetvl_e32m8(n);
                         const int* intptr = (const int*)bottom_blob + offset;
                         float* ptr = (float*)top_blob + offset;
@@ -217,7 +219,8 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                     int n = outw * 4;
                     int offset = 0;
 
-                    while (n > 0) {
+                    while (n > 0)
+                    {
                         vl = vsetvl_e32m8(n);
                         const int* intptr = (const int*)bottom_blob + offset;
                         float* ptr = (float*)top_blob + offset;
@@ -445,7 +448,7 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         vfloat32m1_t _v1 = vfcvt_f_x_v_i32m1(vle32_v_i32m1(intptr + 4, vl), vl);
                         vfloat32m1_t _v2 = vfcvt_f_x_v_i32m1(vle32_v_i32m1(intptr + 8, vl), vl);
                         vfloat32m1_t _v3 = vfcvt_f_x_v_i32m1(vle32_v_i32m1(intptr + 12, vl), vl);
-                        
+
                         // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
                         // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
                         // float32x4_t _v2 = vcvtq_f32_s32(vld1q_s32(intptr + 8));

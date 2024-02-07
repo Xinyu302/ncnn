@@ -54,6 +54,7 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
     {
         if (dims == 1)
         {
+            fprintf(stderr, "=============in line 57==========\n");
             int w = bottom_blob.w;
             int outw = w * 2;
 
@@ -108,7 +109,7 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         // vfloat32m8_t _v = vle32_v_i32m8(intptr, vl);
                         vfloat32m8_t _bias = vfmv_v_f_f32m8(bias_data[0], vl);
                         vfloat32m8_t _v = vfcvt_f_x_v_f32m8(vle32_v_i32m8(intptr, vl), vl);
-                        _v = vfmadd_vf_f32m8(_bias, _scale, _v, vl);
+                        _v = vfmadd_vf_f32m8(_v, _scale, _bias, vl);
                         vse32_v_f32m8(ptr, _v, vl);
                         offset += vl;
                         n -= vl;
@@ -268,7 +269,7 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
             int w = bottom_blob.w;
             int h = bottom_blob.h;
             int outh = h * 2;
-            vl = vsetvlmax_e32m1();
+            vl = 4;
 
             top_blob.create(w, outh, (size_t)16u, 4, opt.blob_allocator);
             if (top_blob.empty())
@@ -334,8 +335,8 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                     {
                         vfloat32m1_t _v0 = vfcvt_f_x_v_f32m1(vle32_v_i32m1(intptr, vl), vl);
                         vfloat32m1_t _v1 = vfcvt_f_x_v_f32m1(vle32_v_i32m1(intptr + 4, vl), vl);
-                        _v0 = vfmadd_vv_f32m1(_v0, _bias0, _scale0, vl);
-                        _v1 = vfmadd_vv_f32m1(_v1, _bias1, _scale1, vl);
+                        _v0 = vfmadd_vv_f32m1(_v0, _scale0, _bias0, vl);
+                        _v1 = vfmadd_vv_f32m1(_v1, _scale1, _bias1, vl);
                         vse32_v_f32m1(ptr0, _v0, vl);
                         vse32_v_f32m1(ptr1, _v1, vl);
 
@@ -499,8 +500,8 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         vfloat32m1_t _v0 = vfcvt_f_x_v_f32m1(vle32_v_i32m1(intptr, vl), vl);
                         vfloat32m1_t _v1 = vfcvt_f_x_v_f32m1(vle32_v_i32m1(intptr + 4, vl), vl);
 
-                        _v0 = vfmadd_vv_f32m1(_v0, _bias0, _scale0, vl);
-                        _v1 = vfmadd_vv_f32m1(_v1, _bias1, _scale1, vl);
+                        _v0 = vfmadd_vv_f32m1(_v0, _scale0, _bias0, vl);
+                        _v1 = vfmadd_vv_f32m1(_v1, _scale1, _bias1, vl);
 
                         vse32_v_f32m1(ptr0, _v0, vl);
                         vse32_v_f32m1(ptr1, _v1, vl);
@@ -528,6 +529,7 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
     {
         if (dims == 1)
         {
+            fprintf(stderr, "============in line 532=============\n");
             int w = bottom_blob.w;
 
             top_blob.create(w, (size_t)16u, elempack, opt.blob_allocator);
@@ -598,6 +600,7 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                 }
                 else
                 {
+                    fprintf(stderr, "Maybe Wrong Here?\n");
                     int n = w * 4;
                     int offset = 0;
                     while (n > 0)
@@ -605,8 +608,7 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         vl = vsetvl_e32m8(n);
                         const int* intptr = (const int*)bottom_blob + offset;
                         float* ptr = (float*)top_blob + offset;
-                        vfloat32m8_t _scale = vle32_v_f32m8((const float*)scale_data + offset, vl);
-                        vfloat32m8_t _bias = vle32_v_f32m8((const float*)bias_data + offset, vl);
+                        vfloat32m8_t _scale = vfmv_v_f_f32m8(scale_data[0], vl);                        vfloat32m8_t _bias = vle32_v_f32m8((const float*)bias_data + offset, vl);
                         vfloat32m8_t _v = vfcvt_f_x_v_f32m8(vle32_v_i32m8(intptr, vl), vl);
                         _v = vfmadd_vv_f32m8(_scale, _v, _bias, vl);
                         vse32_v_f32m8(ptr, _v, vl);
@@ -840,7 +842,6 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
 
         if (dims == 3)
         {
-            fprintf(stderr, "in 831\n");
             int w = bottom_blob.w;
             int h = bottom_blob.h;
             int channels = bottom_blob.c;
@@ -990,6 +991,7 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
 
     if (dims == 1)
     {
+        fprintf(stderr, "============in line 994=============\n");
         int w = bottom_blob.w;
 
         top_blob.create(w, (size_t)4u, opt.blob_allocator);
@@ -1161,7 +1163,6 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
 
     if (dims == 3)
     {
-        fprintf(stderr, "in 1152\n");
         int w = bottom_blob.w;
         int h = bottom_blob.h;
         int channels = bottom_blob.c;

@@ -1090,4 +1090,678 @@ int InnerProduct_riscv::forward_fp16sa(const Mat& bottom_blob, Mat& top_blob, co
 }
 #endif // __riscv_vector && __riscv_zfh
 
+#if NCNN_INT8
+int InnerProduct_riscv::create_pipeline_int8_riscv(const Option& opt)
+{
+    const int num_input = weight_data_size / num_output;
+
+    int out_elempack = 1;
+#if __riscv_vector
+    if (opt.use_packing_layout)
+    {
+        out_elempack = num_output % 8 == 0 ? 8 : 1;
+    }
+#endif
+
+    // src = inch-outch
+    // dst = pb-inch-outch/pb
+    {
+        Mat weight_data_r2 = weight_data.reshape(num_input, num_output);
+
+        weight_data_tm.create(num_input, num_output / out_elempack, (size_t)out_elempack, out_elempack);
+
+        for (int q = 0; q + (out_elempack - 1) < num_output; q += out_elempack)
+        {
+            signed char* g0 = weight_data_tm.row<signed char>(q / out_elempack);
+
+            for (int p = 0; p < num_input; p++)
+            {
+                for (int j = 0; j < out_elempack; j++)
+                {
+                    *g0++ = weight_data_r2.row<signed char>(q + j)[p];
+                }
+            }
+        }
+    }
+
+    scale_in_data.create(num_output);
+    for (int p = 0; p < num_output; p++)
+    {
+        // dequantize
+        float scale_in;
+        if (weight_data_int8_scales[p] == 0)
+            scale_in = 0;
+        else
+            scale_in = 1.f / (bottom_blob_int8_scales[0] * weight_data_int8_scales[p]);
+
+        scale_in_data[p] = scale_in;
+    }
+
+    weight_data.release();
+
+    return 0;
+}
+
+int InnerProduct_riscv::forward_int8_riscv(const Mat& bottom_blob, Mat& top_blob, const Option& opt) const
+{
+    int vl;
+    const int num_input = weight_data_size / num_output;
+
+    int elembits = bottom_blob.elembits();
+
+    Mat bottom_blob_int8 = bottom_blob;
+    if (elembits != 8)
+    {
+        Option opt_q = opt;
+        opt_q.blob_allocator = opt.workspace_allocator;
+        quantize_to_int8(bottom_blob, bottom_blob_int8, bottom_blob_int8_scales, opt_q);
+    }
+
+    if (bottom_blob_int8.dims == 2 && bottom_blob_int8.w == num_input)
+    {
+        // gemm
+        Mat bottom_blob_int8_unpacked;
+        Option opt_unpack = opt;
+        opt_unpack.blob_allocator = opt.workspace_allocator;
+        convert_packing(bottom_blob_int8, bottom_blob_int8_unpacked, 1, opt_unpack);
+
+        int h = bottom_blob_int8_unpacked.h;
+
+        int out_elempack = 1;
+#if __riscv_vector
+        if (opt.use_packing_layout)
+        {
+            out_elempack = h % 4 == 0 ? 4 : 1;
+        }
+#endif
+
+        int outh = h / out_elempack;
+
+        top_blob.create(num_output, outh, (size_t)(4u * out_elempack), out_elempack, opt.blob_allocator);
+        if (top_blob.empty())
+            return -100;
+
+        int num_output_elempack = 1;
+#if __riscv_vector
+        if (opt.use_packing_layout)
+        {
+            num_output_elempack = num_output % 8 == 0 ? 8 : 1;
+        }
+#endif
+
+#if __riscv_vector
+        if (num_output_elempack == 8 && out_elempack == 4)
+        {
+            #pragma omp parallel for num_threads(opt.num_threads)
+            for (int j = 0; j < outh; j++)
+            {
+                float* outptr = top_blob.row(j);
+
+                for (int p = 0; p < num_output / num_output_elempack; p++)
+                {
+                    const signed char* kptr = weight_data_tm.row<const signed char>(p);
+                    const signed char* m0 = bottom_blob_int8_unpacked.row<const signed char>(j * 4);
+                    const signed char* m1 = bottom_blob_int8_unpacked.row<const signed char>(j * 4 + 1);
+                    const signed char* m2 = bottom_blob_int8_unpacked.row<const signed char>(j * 4 + 2);
+                    const signed char* m3 = bottom_blob_int8_unpacked.row<const signed char>(j * 4 + 3);
+
+                    vl = 8;
+                    vint32m2_t _sum0 = vfmv_v_f_i32m2(0, vl);
+                    // vint32m2_t _sum01 = vfmv_v_f_i32m2(0, vl);
+                    vint32m2_t _sum1 = vfmv_v_f_i32m2(0, vl);
+                    // vint32m2_t _sum11 = vfmv_v_f_i32m2(0, vl);
+                    vint32m2_t _sum2 = vfmv_v_f_i32m2(0, vl);
+                    // vint32m2_t _sum21 = vfmv_v_f_i32m2(0, vl);
+                    vint32m2_t _sum3 = vfmv_v_f_i32m2(0, vl);
+                    // vint32m2_t _sum31 = vfmv_v_f_i32m2(0, vl);
+
+
+
+
+                    // int32x4_t _sum00 = vdupq_n_s32(0);
+                    // int32x4_t _sum01 = vdupq_n_s32(0);
+                    // int32x4_t _sum10 = vdupq_n_s32(0);
+                    // int32x4_t _sum11 = vdupq_n_s32(0);
+                    // int32x4_t _sum20 = vdupq_n_s32(0);
+                    // int32x4_t _sum21 = vdupq_n_s32(0);
+                    // int32x4_t _sum30 = vdupq_n_s32(0);
+                    // int32x4_t _sum31 = vdupq_n_s32(0);
+
+                    int i = 0;
+                    for (; i < num_input; i++)
+                    {
+                        vint8m1_t _val0 = vmv_v_x_i8m1(m0[0], vl);
+                        vint8m1_t _val1 = vmv_v_x_i8m1(m1[0], vl);
+                        vint8m1_t _val2 = vmv_v_x_i8m1(m2[0], vl);
+                        vint8m1_t _val3 = vmv_v_x_i8m1(m3[0], vl);
+
+                        vint8m1_t _w = vle8_v_i8m1(kptr, vl);
+
+                        vint16m2_t _s0 = vmv_v_x_i16m2(0, vl);
+
+                        // int8x8_t _val0 = vld1_dup_s8(m0);
+                        // int8x8_t _val1 = vld1_dup_s8(m1);
+                        // int8x8_t _val2 = vld1_dup_s8(m2);
+                        // int8x8_t _val3 = vld1_dup_s8(m3);
+
+                        int8x8_t _w = vld1_s8(kptr);
+                        vint16m1_t _s0 = vget_v_i16m2_i16m1(vwmul_vx_i16m2(_val0, _w, vl), 0);
+                        vint16m1_t _s1 = vget_v_i16m2_i16m1(vwmul_vx_i16m2(_val1, _w, vl), 0);
+                        vint16m1_t _s2 = vget_v_i16m2_i16m1(vwmul_vx_i16m2(_val2, _w, vl), 0);
+                        vint16m1_t _s3 = vget_v_i16m2_i16m1(vwmul_vx_i16m2(_val3, _w, vl), 0);
+
+                        _sum0 = vwadd_wv_i32m2(_sum0, _s0, vl);
+                        _sum1 = vwadd_wv_i32m2(_sum1, _s1, vl);
+                        _sum2 = vwadd_wv_i32m2(_sum2, _s2, vl);
+                        _sum3 = vwadd_wv_i32m2(_sum3, _s3, vl);
+
+                        // int16x8_t _s0 = vmull_s8(_val0, _w);
+                        // int16x8_t _s1 = vmull_s8(_val1, _w);
+                        // int16x8_t _s2 = vmull_s8(_val2, _w);
+                        // int16x8_t _s3 = vmull_s8(_val3, _w);
+                        // _sum00 = vaddw_s16(_sum00, vget_low_s16(_s0));
+                        // _sum01 = vaddw_s16(_sum01, vget_high_s16(_s0));
+                        // _sum10 = vaddw_s16(_sum10, vget_low_s16(_s1));
+                        // _sum11 = vaddw_s16(_sum11, vget_high_s16(_s1));
+                        // _sum20 = vaddw_s16(_sum20, vget_low_s16(_s2));
+                        // _sum21 = vaddw_s16(_sum21, vget_high_s16(_s2));
+                        // _sum30 = vaddw_s16(_sum30, vget_low_s16(_s3));
+                        // _sum31 = vaddw_s16(_sum31, vget_high_s16(_s3));
+
+                        m0++;
+                        m1++;
+                        m2++;
+                        m3++;
+                        kptr += 8;
+                    }
+
+                    // dequantize and relu
+                    vfloat32m2_t _scale_in = vle32_v_f32m2(scale_in_data + p * 8, vl);
+
+                    vfloat32m2_t _sumfp32_0 = vcvt_f32_s32_m2_f32m2(_sum0, vl);
+                    vfloat32m2_t _sumfp32_1 = vcvt_f32_s32_m2_f32m2(_sum1, vl);
+                    vfloat32m2_t _sumfp32_2 = vcvt_f32_s32_m2_f32m2(_sum2, vl);
+                    vfloat32m2_t _sumfp32_3 = vcvt_f32_s32_m2_f32m2(_sum3, vl);
+
+
+                    // float32x4_t _scale_in0 = vld1q_f32((const float*)scale_in_data + p * 8);
+                    // float32x4_t _scale_in1 = vld1q_f32((const float*)scale_in_data + p * 8 + 4);
+
+                    // float32x4_t _sumfp32_00 = vcvtq_f32_s32(_sum00);
+                    // float32x4_t _sumfp32_01 = vcvtq_f32_s32(_sum01);
+                    // float32x4_t _sumfp32_10 = vcvtq_f32_s32(_sum10);
+                    // float32x4_t _sumfp32_11 = vcvtq_f32_s32(_sum11);
+                    // float32x4_t _sumfp32_20 = vcvtq_f32_s32(_sum20);
+                    // float32x4_t _sumfp32_21 = vcvtq_f32_s32(_sum21);
+                    // float32x4_t _sumfp32_30 = vcvtq_f32_s32(_sum30);
+                    // float32x4_t _sumfp32_31 = vcvtq_f32_s32(_sum31);
+                    if (bias_term)
+                    {
+                        vfloat32m2_t _bias = vle32_v_f32m2(bias_data + p * 8, vl);
+                        _sumfp32_0 = vfmacc_vf_f32m2(_sumfp32_0, _scale_in, _bias, vl);
+                        _sumfp32_1 = vfmacc_vf_f32m2(_sumfp32_1, _scale_in, _bias, vl);
+                        _sumfp32_2 = vfmacc_vf_f32m2(_sumfp32_2, _scale_in, _bias, vl);
+                        _sumfp32_3 = vfmacc_vf_f32m2(_sumfp32_3, _scale_in, _bias, vl);
+                        
+                        // float32x4_t _bias0 = vld1q_f32((const float*)bias_data + p * 8);
+                        // float32x4_t _bias1 = vld1q_f32((const float*)bias_data + p * 8 + 4);
+                        // _sumfp32_00 = vmlaq_f32(_bias0, _sumfp32_00, _scale_in0);
+                        // _sumfp32_01 = vmlaq_f32(_bias1, _sumfp32_01, _scale_in1);
+                        // _sumfp32_10 = vmlaq_f32(_bias0, _sumfp32_10, _scale_in0);
+                        // _sumfp32_11 = vmlaq_f32(_bias1, _sumfp32_11, _scale_in1);
+                        // _sumfp32_20 = vmlaq_f32(_bias0, _sumfp32_20, _scale_in0);
+                        // _sumfp32_21 = vmlaq_f32(_bias1, _sumfp32_21, _scale_in1);
+                        // _sumfp32_30 = vmlaq_f32(_bias0, _sumfp32_30, _scale_in0);
+                        // _sumfp32_31 = vmlaq_f32(_bias1, _sumfp32_31, _scale_in1);
+                    }
+                    else
+                    {
+                        _sumfp32_0 = vfmul_vf_f32m2(_sumfp32_0, _scale_in, vl);
+                        _sumfp32_1 = vfmul_vf_f32m2(_sumfp32_1, _scale_in, vl);
+                        _sumfp32_2 = vfmul_vf_f32m2(_sumfp32_2, _scale_in, vl);
+                        _sumfp32_3 = vfmul_vf_f32m2(_sumfp32_3, _scale_in, vl);
+
+                        // _sumfp32_00 = vmulq_f32(_sumfp32_00, _scale_in0);
+                        // _sumfp32_01 = vmulq_f32(_sumfp32_01, _scale_in1);
+                        // _sumfp32_10 = vmulq_f32(_sumfp32_10, _scale_in0);
+                        // _sumfp32_11 = vmulq_f32(_sumfp32_11, _scale_in1);
+                        // _sumfp32_20 = vmulq_f32(_sumfp32_20, _scale_in0);
+                        // _sumfp32_21 = vmulq_f32(_sumfp32_21, _scale_in1);
+                        // _sumfp32_30 = vmulq_f32(_sumfp32_30, _scale_in0);
+                        // _sumfp32_31 = vmulq_f32(_sumfp32_31, _scale_in1);
+                    }
+
+                    _sumfp32_0 = activation_ps(_sumfp32_0, activation_type, activation_params);
+                    // _sumfp32_01 = activation_ps(_sumfp32_01, activation_type, activation_params);
+                    _sumfp32_1 = activation_ps(_sumfp32_1, activation_type, activation_params);
+                    // _sumfp32_11 = activation_ps(_sumfp32_11, activation_type, activation_params);
+                    _sumfp32_2 = activation_ps(_sumfp32_2, activation_type, activation_params);
+                    // _sumfp32_21 = activation_ps(_sumfp32_21, activation_type, activation_params);
+                    _sumfp32_3 = activation_ps(_sumfp32_3, activation_type, activation_params);
+                    // _sumfp32_31 = activation_ps(_sumfp32_31, activation_type, activation_params);
+
+                    vsseg4e32_v_f32m2(outptr, _sumfp32_0, _sumfp32_1, _sumfp32_2, _sumfp32_3, vl);
+                    // transpose 4x8
+                    // float32x4x4_t _sumfp32_0;
+                    // _sumfp32_0.val[0] = _sumfp32_00;
+                    // _sumfp32_0.val[1] = _sumfp32_10;
+                    // _sumfp32_0.val[2] = _sumfp32_20;
+                    // _sumfp32_0.val[3] = _sumfp32_30;
+                    // float32x4x4_t _sumfp32_1;
+                    // _sumfp32_1.val[0] = _sumfp32_01;
+                    // _sumfp32_1.val[1] = _sumfp32_11;
+                    // _sumfp32_1.val[2] = _sumfp32_21;
+                    // _sumfp32_1.val[3] = _sumfp32_31;
+
+                    // vst4q_f32(outptr, _sumfp32_0);
+                    // vst4q_f32(outptr + 16, _sumfp32_1);
+
+                    outptr += 32;
+                }
+            }
+        }
+
+        if (num_output_elempack == 1 && out_elempack == 4)
+        {
+            #pragma omp parallel for num_threads(opt.num_threads)
+            for (int j = 0; j < outh; j++)
+            {
+                float* outptr = top_blob.row(j);
+
+                for (int p = 0; p < num_output; p++)
+                {
+                    const signed char* kptr = weight_data_tm.row<const signed char>(p);
+                    const signed char* m0 = bottom_blob_int8_unpacked.row<const signed char>(j * 4);
+                    const signed char* m1 = bottom_blob_int8_unpacked.row<const signed char>(j * 4 + 1);
+                    const signed char* m2 = bottom_blob_int8_unpacked.row<const signed char>(j * 4 + 2);
+                    const signed char* m3 = bottom_blob_int8_unpacked.row<const signed char>(j * 4 + 3);
+
+                    int sum0 = 0;
+                    int sum1 = 0;
+                    int sum2 = 0;
+                    int sum3 = 0;
+
+                    int i = 0;
+
+                    int n = num_input;
+                        
+                    vl = vsetvlmax_e32m4(n);
+                    vint32m4_t _sum0 = vfmv_v_f_i32m4(0, vl);
+                    vint32m4_t _sum1 = vfmv_v_f_i32m4(0, vl);
+                    vint32m4_t _sum2 = vfmv_v_f_i32m4(0, vl);
+                    vint32m4_t _sum3 = vfmv_v_f_i32m4(0, vl);
+
+                    while(n > 0) 
+                    {
+                        vl = vsetvl_e32m4(n);
+                        vint8m1_t _val0 = vle8_v_i8m1(m0, vl);
+                        vint8m1_t _val1 = vle8_v_i8m1(m1, vl);
+                        vint8m1_t _val2 = vle8_v_i8m1(m2, vl);
+                        vint8m1_t _val3 = vle8_v_i8m1(m3, vl);
+
+                        vint8m1_t _w = vle8_v_i8m1(kptr, vl);
+
+                        vint16m2_t _s0 = vwmul_vv_i16m2(_val0, _w, vl);
+                        vint16m2_t _s1 = vwmul_vv_i16m2(_val1, _w, vl);
+                        vint16m2_t _s2 = vwmul_vv_i16m2(_val2, _w, vl);
+                        vint16m2_t _s3 = vwmul_vv_i16m2(_val3, _w, vl);
+
+                        _sum0 = vwadd_wv_i32m4(_sum0, _s0, vl);
+                        _sum1 = vwadd_wv_i32m4(_sum1, _s1, vl);
+                        _sum2 = vwadd_wv_i32m4(_sum2, _s2, vl);
+                        _sum3 = vwadd_wv_i32m4(_sum3, _s3, vl);
+
+                    }
+                        
+                    sum0 = 
+
+                    // int32x4_t _sum0 = vdupq_n_s32(0);
+                    // int32x4_t _sum1 = vdupq_n_s32(0);
+                    // int32x4_t _sum2 = vdupq_n_s32(0);
+                    // int32x4_t _sum3 = vdupq_n_s32(0);
+                    // for (; i + 7 < num_input; i += 8)
+                    // {
+                    //     int8x8_t _val0 = vld1_s8(m0);
+                    //     int8x8_t _val1 = vld1_s8(m1);
+                    //     int8x8_t _val2 = vld1_s8(m2);
+                    //     int8x8_t _val3 = vld1_s8(m3);
+                    //     int8x8_t _w = vld1_s8(kptr);
+
+                    //     int16x8_t _s0 = vmull_s8(_val0, _w);
+                    //     int16x8_t _s1 = vmull_s8(_val1, _w);
+                    //     int16x8_t _s2 = vmull_s8(_val2, _w);
+                    //     int16x8_t _s3 = vmull_s8(_val3, _w);
+                    //     _sum0 = vaddw_s16(_sum0, vget_low_s16(_s0));
+                    //     _sum1 = vaddw_s16(_sum1, vget_low_s16(_s1));
+                    //     _sum2 = vaddw_s16(_sum2, vget_low_s16(_s2));
+                    //     _sum3 = vaddw_s16(_sum3, vget_low_s16(_s3));
+                    //     _sum0 = vaddw_s16(_sum0, vget_high_s16(_s0));
+                    //     _sum1 = vaddw_s16(_sum1, vget_high_s16(_s1));
+                    //     _sum2 = vaddw_s16(_sum2, vget_high_s16(_s2));
+                    //     _sum3 = vaddw_s16(_sum3, vget_high_s16(_s3));
+
+                    //     m0 += 8;
+                    //     m1 += 8;
+                    //     m2 += 8;
+                    //     m3 += 8;
+                    //     kptr += 8;
+                    // }
+
+                    // sum0 = vaddvq_s32(_sum0);
+                    // sum1 = vaddvq_s32(_sum1);
+                    // sum2 = vaddvq_s32(_sum2);
+                    // sum3 = vaddvq_s32(_sum3);
+
+                    // for (; i < num_input; i++)
+                    // {
+                    //     sum0 += *m0++ * kptr[0];
+                    //     sum1 += *m1++ * kptr[0];
+                    //     sum2 += *m2++ * kptr[0];
+                    //     sum3 += *m3++ * kptr[0];
+                    //     kptr += 1;
+                    // }
+
+                    // dequantize and relu
+                    float sumfp32_0 = sum0 * scale_in_data[p];
+                    float sumfp32_1 = sum1 * scale_in_data[p];
+                    float sumfp32_2 = sum2 * scale_in_data[p];
+                    float sumfp32_3 = sum3 * scale_in_data[p];
+
+                    if (bias_term)
+                    {
+                        sumfp32_0 += bias_data[p];
+                        sumfp32_1 += bias_data[p];
+                        sumfp32_2 += bias_data[p];
+                        sumfp32_3 += bias_data[p];
+                    }
+
+                    outptr[0] = activation_ss(sumfp32_0, activation_type, activation_params);
+                    outptr[1] = activation_ss(sumfp32_1, activation_type, activation_params);
+                    outptr[2] = activation_ss(sumfp32_2, activation_type, activation_params);
+                    outptr[3] = activation_ss(sumfp32_3, activation_type, activation_params);
+                    outptr += 4;
+                }
+            }
+        }
+
+        if (num_output_elempack == 8 && out_elempack == 1)
+        {
+            #pragma omp parallel for num_threads(opt.num_threads)
+            for (int j = 0; j < outh; j++)
+            {
+                float* outptr = top_blob.row(j);
+
+                for (int p = 0; p < num_output / num_output_elempack; p++)
+                {
+                    const signed char* kptr = weight_data_tm.row<const signed char>(p);
+                    const signed char* m = bottom_blob_int8_unpacked.row<const signed char>(j);
+
+                    int32x4_t _sum0 = vdupq_n_s32(0);
+                    int32x4_t _sum1 = vdupq_n_s32(0);
+
+                    int i = 0;
+                    for (; i + 3 < num_input; i += 4)
+                    {
+                        int8x8_t _val0 = vdup_n_s8(m[0]);
+                        int8x8_t _val1 = vdup_n_s8(m[1]);
+                        int8x8_t _val2 = vdup_n_s8(m[2]);
+                        int8x8_t _val3 = vdup_n_s8(m[3]);
+
+                        int8x16_t _w0 = vld1q_s8(kptr);
+                        int8x16_t _w1 = vld1q_s8(kptr + 16);
+
+                        int16x8_t _s0 = vmull_s8(_val0, vget_low_s8(_w0));
+                        int16x8_t _s1 = vmull_s8(_val2, vget_low_s8(_w1));
+                        _s0 = vmlal_s8(_s0, _val1, vget_high_s8(_w0));
+                        _s1 = vmlal_s8(_s1, _val3, vget_high_s8(_w1));
+
+                        _sum0 = vaddw_s16(_sum0, vget_low_s16(_s0));
+                        _sum1 = vaddw_s16(_sum1, vget_high_s16(_s0));
+                        _sum0 = vaddw_s16(_sum0, vget_low_s16(_s1));
+                        _sum1 = vaddw_s16(_sum1, vget_high_s16(_s1));
+
+                        m += 4;
+                        kptr += 32;
+                    }
+                    for (; i < num_input; i++)
+                    {
+                        int8x8_t _val = vld1_dup_s8(m);
+                        int8x8_t _w = vld1_s8(kptr);
+
+                        int16x8_t _s0 = vmull_s8(_val, _w);
+                        _sum0 = vaddw_s16(_sum0, vget_low_s16(_s0));
+                        _sum1 = vaddw_s16(_sum1, vget_high_s16(_s0));
+
+                        m++;
+                        kptr += 8;
+                    }
+
+                    // dequantize and relu
+                    float32x4_t _scale_in0 = vld1q_f32((const float*)scale_in_data + p * 8);
+                    float32x4_t _scale_in1 = vld1q_f32((const float*)scale_in_data + p * 8 + 4);
+
+                    float32x4_t _sumfp32_0 = vcvtq_f32_s32(_sum0);
+                    float32x4_t _sumfp32_1 = vcvtq_f32_s32(_sum1);
+
+                    if (bias_term)
+                    {
+                        float32x4_t _bias0 = vld1q_f32((const float*)bias_data + p * 8);
+                        float32x4_t _bias1 = vld1q_f32((const float*)bias_data + p * 8 + 4);
+                        _sumfp32_0 = vmlaq_f32(_bias0, _sumfp32_0, _scale_in0);
+                        _sumfp32_1 = vmlaq_f32(_bias1, _sumfp32_1, _scale_in1);
+                    }
+                    else
+                    {
+                        _sumfp32_0 = vmulq_f32(_sumfp32_0, _scale_in0);
+                        _sumfp32_1 = vmulq_f32(_sumfp32_1, _scale_in1);
+                    }
+
+                    _sumfp32_0 = activation_ps(_sumfp32_0, activation_type, activation_params);
+                    _sumfp32_1 = activation_ps(_sumfp32_1, activation_type, activation_params);
+
+                    vst1q_f32(outptr, _sumfp32_0);
+                    vst1q_f32(outptr + 4, _sumfp32_1);
+                    outptr += 8;
+                }
+            }
+        }
+#endif // __riscv_vector
+
+        if (num_output_elempack == 1 && out_elempack == 1)
+        {
+            #pragma omp parallel for num_threads(opt.num_threads)
+            for (int j = 0; j < outh; j++)
+            {
+                float* outptr = top_blob.row(j);
+
+                for (int p = 0; p < num_output; p++)
+                {
+                    const signed char* kptr = weight_data_tm.row<const signed char>(p);
+                    const signed char* m = bottom_blob_int8_unpacked.row<const signed char>(j);
+
+                    int sum = 0;
+
+                    int i = 0;
+#if __riscv_vector
+                    int32x4_t _sum0 = vdupq_n_s32(0);
+                    int32x4_t _sum1 = vdupq_n_s32(0);
+                    for (; i + 7 < num_input; i += 8)
+                    {
+                        int8x8_t _val = vld1_s8(m);
+                        int8x8_t _w = vld1_s8(kptr);
+
+                        int16x8_t _s0 = vmull_s8(_val, _w);
+                        _sum0 = vaddw_s16(_sum0, vget_low_s16(_s0));
+                        _sum1 = vaddw_s16(_sum1, vget_high_s16(_s0));
+
+                        m += 8;
+                        kptr += 8;
+                    }
+
+                    _sum0 = vaddq_s32(_sum0, _sum1);
+#if __aarch64__
+                    sum = vaddvq_s32(_sum0);
+#else
+                    int32x2_t _s2 = vadd_s32(vget_low_s32(_sum0), vget_high_s32(_sum0));
+                    _s2 = vpadd_s32(_s2, _s2);
+                    sum = vget_lane_s32(_s2, 0);
+#endif
+#endif // __riscv_vector
+                    for (; i < num_input; i++)
+                    {
+                        sum += *m++ * *kptr++;
+                    }
+
+                    // dequantize and relu
+                    float sumfp32 = sum * scale_in_data[p];
+
+                    if (bias_term)
+                        sumfp32 += bias_data[p];
+
+                    outptr[0] = activation_ss(sumfp32, activation_type, activation_params);
+                    outptr += 1;
+                }
+            }
+        }
+
+        return 0;
+    }
+
+    Mat bottom_blob_int8_flattened = bottom_blob_int8;
+    if (bottom_blob_int8.dims != 1)
+    {
+        Option opt_flatten = opt;
+        opt_flatten.blob_allocator = opt.workspace_allocator;
+        flatten->forward(bottom_blob_int8, bottom_blob_int8_flattened, opt_flatten);
+    }
+
+    //     int elempack = bottom_blob_int8_flattened.elempack;
+
+    int out_elempack = 1;
+#if __riscv_vector
+    if (opt.use_packing_layout)
+    {
+        out_elempack = num_output % 8 == 0 ? 8 : 1;
+    }
+#endif
+
+    top_blob.create(num_output / out_elempack, (size_t)(4u * out_elempack), out_elempack, opt.blob_allocator);
+    if (top_blob.empty())
+        return -100;
+
+#if __riscv_vector
+    if (out_elempack == 8)
+    {
+        // num_output
+        #pragma omp parallel for num_threads(opt.num_threads)
+        for (int p = 0; p < num_output / out_elempack; p++)
+        {
+            const signed char* kptr = weight_data_tm.row<const signed char>(p);
+            const signed char* sptr = bottom_blob_int8_flattened;
+
+            int32x4_t _sum0 = vdupq_n_s32(0);
+            int32x4_t _sum1 = vdupq_n_s32(0);
+
+            int i = 0;
+            for (; i + 1 < num_input; i += 2)
+            {
+                int8x8_t _val0 = vdup_n_s8(sptr[0]);
+                int8x8_t _val1 = vdup_n_s8(sptr[1]);
+
+                int8x8_t _w0 = vld1_s8(kptr);
+                int8x8_t _w1 = vld1_s8(kptr + 8);
+
+                int16x8_t _s0 = vmull_s8(_val0, _w0);
+                _s0 = vmlal_s8(_s0, _val1, _w1);
+
+                _sum0 = vaddw_s16(_sum0, vget_low_s16(_s0));
+                _sum1 = vaddw_s16(_sum1, vget_high_s16(_s0));
+
+                sptr += 2;
+                kptr += 16;
+            }
+            for (; i < num_input; i++)
+            {
+                int8x8_t _val = vdup_n_s8(sptr[0]);
+
+                int8x8_t _w = vld1_s8(kptr);
+
+                int16x8_t _s0 = vmull_s8(_val, _w);
+                _sum0 = vaddw_s16(_sum0, vget_low_s16(_s0));
+                _sum1 = vaddw_s16(_sum1, vget_high_s16(_s0));
+
+                sptr += 1;
+                kptr += 8;
+            }
+
+            // dequantize and relu
+            float32x4_t _scale_in0 = vld1q_f32((const float*)scale_in_data + p * 8);
+            float32x4_t _scale_in1 = vld1q_f32((const float*)scale_in_data + p * 8 + 4);
+
+            float32x4_t _sumfp32_0 = vcvtq_f32_s32(_sum0);
+            float32x4_t _sumfp32_1 = vcvtq_f32_s32(_sum1);
+
+            if (bias_term)
+            {
+                float32x4_t _bias0 = vld1q_f32((const float*)bias_data + p * 8);
+                float32x4_t _bias1 = vld1q_f32((const float*)bias_data + p * 8 + 4);
+                _sumfp32_0 = vmlaq_f32(_bias0, _sumfp32_0, _scale_in0);
+                _sumfp32_1 = vmlaq_f32(_bias1, _sumfp32_1, _scale_in1);
+            }
+            else
+            {
+                _sumfp32_0 = vmulq_f32(_sumfp32_0, _scale_in0);
+                _sumfp32_1 = vmulq_f32(_sumfp32_1, _scale_in1);
+            }
+
+            _sumfp32_0 = activation_ps(_sumfp32_0, activation_type, activation_params);
+            _sumfp32_1 = activation_ps(_sumfp32_1, activation_type, activation_params);
+
+            float* outptr = (float*)top_blob + p * 8;
+            vst1q_f32(outptr, _sumfp32_0);
+            vst1q_f32(outptr + 4, _sumfp32_1);
+        }
+    }
+#endif // __riscv_vector
+
+    if (out_elempack == 1)
+    {
+        // num_output
+        #pragma omp parallel for num_threads(opt.num_threads)
+        for (int p = 0; p < num_output / out_elempack; p++)
+        {
+            const signed char* kptr = weight_data_tm.row<const signed char>(p);
+            const signed char* sptr = bottom_blob_int8_flattened;
+
+            int sum = 0;
+
+            int i = 0;
+            for (; i < num_input; i++)
+            {
+                signed char val = sptr[0];
+
+                signed char w = kptr[0];
+
+                sum += val * w;
+
+                sptr += 1;
+                kptr += 1;
+            }
+
+            // dequantize and relu
+            float sumfp32 = sum * scale_in_data[p];
+
+            if (bias_term)
+                sumfp32 += bias_data[p];
+
+            sumfp32 = activation_ss(sumfp32, activation_type, activation_params);
+
+            top_blob[p] = sumfp32;
+        }
+    }
+
+    return 0;
+}
+#endif // NCNN_INT8
+
 } // namespace ncnn

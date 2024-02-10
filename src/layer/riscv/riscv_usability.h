@@ -110,11 +110,11 @@ static inline int32_t float2int8(vfloat32m1_t _v)
     return _ret;
 }
 
-static void print_vint8m1(vint8m1_t _v)
+static void print_vint8m1(vint8m1_t _v, int vl = 16)
 {
     int8_t* i8 = (int8_t*)malloc(16 * sizeof(int8_t));
-    vse8_v_i8m1(i8, _v, 16);
-    for (int i = 0; i < 16; i++)
+    vse8_v_i8m1(i8, _v, vl);
+    for (int i = 0; i < vl; i++)
     {
         fprintf(stderr, "i8[%d]: %d\n", i, i8[i]);
     }
@@ -130,6 +130,28 @@ static void print_vint32m1(vint32m1_t _v)
         fprintf(stderr, "i32[%d]: %d\n", i, i32[i]);
     }
     free(i32);
+}
+
+static void print_vint32m2(vint32m2_t _v, int vl = 8)
+{
+    int32_t* i32 = (int32_t*)malloc(8 * sizeof(int32_t));
+    vse32_v_i32m2(i32, _v, vl);
+    for (int i = 0; i < vl; i++)
+    {
+        fprintf(stderr, "i32[%d]: %d\n", i, i32[i]);
+    }
+    free(i32);
+}
+
+static void print_vfloat32m2(vfloat32m2_t _v, int vl = 8)
+{
+    float* f32 = (float*)malloc(8 * sizeof(float));
+    vse32_v_f32m2(f32, _v, vl);
+    for (int i = 0; i < vl; i++)
+    {
+        fprintf(stderr, "f32[%d]: %f\n", i, f32[i]);
+    }
+    free(f32);
 }
 
 static void print_vfloat32m1(vfloat32m1_t _v)

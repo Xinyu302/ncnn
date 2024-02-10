@@ -1428,6 +1428,14 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
                         _sum1 = vwadd_wv_i32m4(_sum1, _s1, vl);
                         _sum2 = vwadd_wv_i32m4(_sum2, _s2, vl);
                         _sum3 = vwadd_wv_i32m4(_sum3, _s3, vl);
+
+                        m0 += vl;
+                        m1 += vl;
+                        m2 += vl;
+                        m3 += vl;
+
+                        kptr += vl;
+                        n -= vl;
                     }
 
                     vint32m1_t _sum0_scala = vmv_v_x_i32m1(0, vl);
@@ -1516,7 +1524,6 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
 
         if (num_output_elempack == 8 && out_elempack == 1)
         {
-            fprintf(stderr, "in 1499\n");
             #pragma omp parallel for num_threads(opt.num_threads)
             for (int j = 0; j < outh; j++)
             {
@@ -1555,11 +1562,11 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
                     //     m += 4;
                     //     kptr += 32;
                     // }
+                    vl = 8;
                     for (; i < num_input; i++)
                     {
-                        vl = 8;
                         vint8m1_t _val = vmv_v_x_i8m1(m[0], vl);
-                        vint8m1_t _w = vmv_v_x_i8m1(kptr[0], vl);
+                        vint8m1_t _w = vle8_v_i8m1(kptr, vl);
 
                         // int8x8_t _val = vld1_dup_s8(m);
                         // int8x8_t _w = vld1_s8(kptr);

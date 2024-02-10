@@ -154,7 +154,6 @@ static void print_vfloat32m2(vfloat32m2_t _v, int vl = 8)
     free(f32);
 }
 
-
 static void print_vfloat32m1(vfloat32m1_t _v)
 {
     float* f32 = (float*)malloc(4 * sizeof(float));

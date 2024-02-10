@@ -1158,7 +1158,6 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
         quantize_to_int8(bottom_blob, bottom_blob_int8, bottom_blob_int8_scales, opt_q);
     }
 
-
     if (bottom_blob_int8.dims == 2 && bottom_blob_int8.w == num_input)
     {
         // gemm
@@ -1255,7 +1254,6 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
                         _sumfp32_1 = vfmacc_vv_f32m2(_bias, _sumfp32_1, _scale_in, vl);
                         _sumfp32_2 = vfmacc_vv_f32m2(_bias, _sumfp32_2, _scale_in, vl);
                         _sumfp32_3 = vfmacc_vv_f32m2(_bias, _sumfp32_3, _scale_in, vl);
-
                     }
                     else
                     {
@@ -1263,7 +1261,6 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
                         _sumfp32_1 = vfmul_vv_f32m2(_sumfp32_1, _scale_in, vl);
                         _sumfp32_2 = vfmul_vv_f32m2(_sumfp32_2, _scale_in, vl);
                         _sumfp32_3 = vfmul_vv_f32m2(_sumfp32_3, _scale_in, vl);
-
                     }
 
                     _sumfp32_0 = activation_ps(_sumfp32_0, activation_type, activation_params, vl);
@@ -1470,9 +1467,9 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
                     _sum_scala = vredsum_vs_i32m4_i32m1(_sum_scala, _sum, _sum_scala, vl);
                     sum = vmv_x_s_i32m1_i32(_sum_scala);
 
-#endif // __riscv_vector         
+#endif // __riscv_vector
 
-// for (; i < num_input; i++) \
+                    // for (; i < num_input; i++) \
 // {                          \
 //     sum += *m++ * *kptr++; \
 // }
@@ -1594,7 +1591,6 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
             sumfp32 = activation_ss(sumfp32, activation_type, activation_params);
 
             top_blob[p] = sumfp32;
-
         }
     }
 

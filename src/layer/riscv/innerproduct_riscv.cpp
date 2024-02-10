@@ -1144,22 +1144,12 @@ int InnerProduct_riscv::create_pipeline_int8(const Option& opt)
 
 int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, const Option& opt) const
 {
-    fprintf(stderr, "InnerProduct_riscv::forward_int8\n");
     int vl;
     const int num_input = weight_data_size / num_output;
 
     int elembits = bottom_blob.elembits();
 
     Mat bottom_blob_int8 = bottom_blob;
-    fprintf(stderr, "elembits: %d\n", elembits);
-    fprintf(stderr, "bottom_blob.dims: %d\n", bottom_blob.dims);
-    // print w, h, d, c
-    fprintf(stderr, "bottom_blob.w: %d\n", bottom_blob.w);
-    fprintf(stderr, "bottom_blob.h: %d\n", bottom_blob.h);
-    fprintf(stderr, "bottom_blob.c: %d\n", bottom_blob.c);
-    fprintf(stderr, "bottom_blob.elemsize: %d\n", bottom_blob.elemsize);
-    fprintf(stderr, "bottom_blob.elempack: %d\n", bottom_blob.elempack);
-
 
     if (elembits != 8)
     {
@@ -1168,17 +1158,9 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
         quantize_to_int8(bottom_blob, bottom_blob_int8, bottom_blob_int8_scales, opt_q);
     }
 
-    fprintf(stderr, "bottom_blob_int8.dims: %d\n", bottom_blob_int8.dims);
-    fprintf(stderr, "bottom_blob_int8.w: %d\n", bottom_blob_int8.w);
-    fprintf(stderr, "bottom_blob_int8.h: %d\n", bottom_blob_int8.h);
-    fprintf(stderr, "bottom_blob_int8.c: %d\n", bottom_blob_int8.c);
-    fprintf(stderr, "bottom_blob_int8.elemsize: %d\n", bottom_blob_int8.elemsize);
-    fprintf(stderr, "bottom_blob_int8.elempack: %d\n", bottom_blob_int8.elempack);
-
 
     if (bottom_blob_int8.dims == 2 && bottom_blob_int8.w == num_input)
     {
-        fprintf(stderr, "in 1163\n");
         // gemm
         Mat bottom_blob_int8_unpacked;
         Option opt_unpack = opt;
@@ -1212,7 +1194,6 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
 #if __riscv_vector
         if (num_output_elempack == 8 && out_elempack == 4)
         {
-            fprintf(stderr, "in 1195\n");
             #pragma omp parallel for num_threads(opt.num_threads)
             for (int j = 0; j < outh; j++)
             {
@@ -1228,22 +1209,9 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
 
                     vl = 8;
                     vint32m2_t _sum0 = vmv_v_x_i32m2(0, vl);
-                    // vint32m2_t _sum01 = vmv_v_x_i32m2(0, vl);
                     vint32m2_t _sum1 = vmv_v_x_i32m2(0, vl);
-                    // vint32m2_t _sum11 = vmv_v_x_i32m2(0, vl);
                     vint32m2_t _sum2 = vmv_v_x_i32m2(0, vl);
-                    // vint32m2_t _sum21 = vmv_v_x_i32m2(0, vl);
                     vint32m2_t _sum3 = vmv_v_x_i32m2(0, vl);
-                    // vint32m2_t _sum31 = vmv_v_x_i32m2(0, vl);
-
-                    // int32x4_t _sum00 = vdupq_n_s32(0);
-                    // int32x4_t _sum01 = vdupq_n_s32(0);
-                    // int32x4_t _sum10 = vdupq_n_s32(0);
-                    // int32x4_t _sum11 = vdupq_n_s32(0);
-                    // int32x4_t _sum20 = vdupq_n_s32(0);
-                    // int32x4_t _sum21 = vdupq_n_s32(0);
-                    // int32x4_t _sum30 = vdupq_n_s32(0);
-                    // int32x4_t _sum31 = vdupq_n_s32(0);
 
                     int i = 0;
                     for (; i < num_input; i++)
@@ -1255,14 +1223,6 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
 
                         vint8m1_t _w = vle8_v_i8m1(kptr, vl);
 
-                        // vint16m2_t _s0 = vmv_v_x_i16m2(0, vl);
-
-                        // int8x8_t _val0 = vld1_dup_s8(m0);
-                        // int8x8_t _val1 = vld1_dup_s8(m1);
-                        // int8x8_t _val2 = vld1_dup_s8(m2);
-                        // int8x8_t _val3 = vld1_dup_s8(m3);
-
-                        // int8x8_t _w = vld1_s8(kptr);
                         vint16m1_t _s0 = vget_v_i16m2_i16m1(vwmul_vv_i16m2(_val0, _w, vl), 0);
                         vint16m1_t _s1 = vget_v_i16m2_i16m1(vwmul_vv_i16m2(_val1, _w, vl), 0);
                         vint16m1_t _s2 = vget_v_i16m2_i16m1(vwmul_vv_i16m2(_val2, _w, vl), 0);
@@ -1272,19 +1232,6 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
                         _sum1 = vwadd_wv_i32m2(_sum1, _s1, vl);
                         _sum2 = vwadd_wv_i32m2(_sum2, _s2, vl);
                         _sum3 = vwadd_wv_i32m2(_sum3, _s3, vl);
-
-                        // int16x8_t _s0 = vmull_s8(_val0, _w);
-                        // int16x8_t _s1 = vmull_s8(_val1, _w);
-                        // int16x8_t _s2 = vmull_s8(_val2, _w);
-                        // int16x8_t _s3 = vmull_s8(_val3, _w);
-                        // _sum00 = vaddw_s16(_sum00, vget_low_s16(_s0));
-                        // _sum01 = vaddw_s16(_sum01, vget_high_s16(_s0));
-                        // _sum10 = vaddw_s16(_sum10, vget_low_s16(_s1));
-                        // _sum11 = vaddw_s16(_sum11, vget_high_s16(_s1));
-                        // _sum20 = vaddw_s16(_sum20, vget_low_s16(_s2));
-                        // _sum21 = vaddw_s16(_sum21, vget_high_s16(_s2));
-                        // _sum30 = vaddw_s16(_sum30, vget_low_s16(_s3));
-                        // _sum31 = vaddw_s16(_sum31, vget_high_s16(_s3));
 
                         m0++;
                         m1++;
@@ -1301,17 +1248,6 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
                     vfloat32m2_t _sumfp32_2 = vfcvt_f_x_v_f32m2(_sum2, vl);
                     vfloat32m2_t _sumfp32_3 = vfcvt_f_x_v_f32m2(_sum3, vl);
 
-                    // float32x4_t _scale_in0 = vld1q_f32((const float*)scale_in_data + p * 8);
-                    // float32x4_t _scale_in1 = vld1q_f32((const float*)scale_in_data + p * 8 + 4);
-
-                    // float32x4_t _sumfp32_00 = vcvtq_f32_s32(_sum00);
-                    // float32x4_t _sumfp32_01 = vcvtq_f32_s32(_sum01);
-                    // float32x4_t _sumfp32_10 = vcvtq_f32_s32(_sum10);
-                    // float32x4_t _sumfp32_11 = vcvtq_f32_s32(_sum11);
-                    // float32x4_t _sumfp32_20 = vcvtq_f32_s32(_sum20);
-                    // float32x4_t _sumfp32_21 = vcvtq_f32_s32(_sum21);
-                    // float32x4_t _sumfp32_30 = vcvtq_f32_s32(_sum30);
-                    // float32x4_t _sumfp32_31 = vcvtq_f32_s32(_sum31);
                     if (bias_term)
                     {
                         vfloat32m2_t _bias = vle32_v_f32m2((const float*)bias_data + p * 8, vl);
@@ -1320,16 +1256,6 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
                         _sumfp32_2 = vfmacc_vv_f32m2(_bias, _sumfp32_2, _scale_in, vl);
                         _sumfp32_3 = vfmacc_vv_f32m2(_bias, _sumfp32_3, _scale_in, vl);
 
-                        // float32x4_t _bias0 = vld1q_f32((const float*)bias_data + p * 8);
-                        // float32x4_t _bias1 = vld1q_f32((const float*)bias_data + p * 8 + 4);
-                        // _sumfp32_00 = vmlaq_f32(_bias0, _sumfp32_00, _scale_in0);
-                        // _sumfp32_01 = vmlaq_f32(_bias1, _sumfp32_01, _scale_in1);
-                        // _sumfp32_10 = vmlaq_f32(_bias0, _sumfp32_10, _scale_in0);
-                        // _sumfp32_11 = vmlaq_f32(_bias1, _sumfp32_11, _scale_in1);
-                        // _sumfp32_20 = vmlaq_f32(_bias0, _sumfp32_20, _scale_in0);
-                        // _sumfp32_21 = vmlaq_f32(_bias1, _sumfp32_21, _scale_in1);
-                        // _sumfp32_30 = vmlaq_f32(_bias0, _sumfp32_30, _scale_in0);
-                        // _sumfp32_31 = vmlaq_f32(_bias1, _sumfp32_31, _scale_in1);
                     }
                     else
                     {
@@ -1338,40 +1264,14 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
                         _sumfp32_2 = vfmul_vv_f32m2(_sumfp32_2, _scale_in, vl);
                         _sumfp32_3 = vfmul_vv_f32m2(_sumfp32_3, _scale_in, vl);
 
-                        // _sumfp32_00 = vmulq_f32(_sumfp32_00, _scale_in0);
-                        // _sumfp32_01 = vmulq_f32(_sumfp32_01, _scale_in1);
-                        // _sumfp32_10 = vmulq_f32(_sumfp32_10, _scale_in0);
-                        // _sumfp32_11 = vmulq_f32(_sumfp32_11, _scale_in1);
-                        // _sumfp32_20 = vmulq_f32(_sumfp32_20, _scale_in0);
-                        // _sumfp32_21 = vmulq_f32(_sumfp32_21, _scale_in1);
-                        // _sumfp32_30 = vmulq_f32(_sumfp32_30, _scale_in0);
-                        // _sumfp32_31 = vmulq_f32(_sumfp32_31, _scale_in1);
                     }
 
                     _sumfp32_0 = activation_ps(_sumfp32_0, activation_type, activation_params, vl);
-                    // _sumfp32_01 = activation_ps(_sumfp32_01, activation_type, activation_params);
                     _sumfp32_1 = activation_ps(_sumfp32_1, activation_type, activation_params, vl);
-                    // _sumfp32_11 = activation_ps(_sumfp32_11, activation_type, activation_params);
                     _sumfp32_2 = activation_ps(_sumfp32_2, activation_type, activation_params, vl);
-                    // _sumfp32_21 = activation_ps(_sumfp32_21, activation_type, activation_params);
                     _sumfp32_3 = activation_ps(_sumfp32_3, activation_type, activation_params, vl);
-                    // _sumfp32_31 = activation_ps(_sumfp32_31, activation_type, activation_params);
 
                     vsseg4e32_v_f32m2(outptr, _sumfp32_0, _sumfp32_1, _sumfp32_2, _sumfp32_3, vl);
-                    // transpose 4x8
-                    // float32x4x4_t _sumfp32_0;
-                    // _sumfp32_0.val[0] = _sumfp32_00;
-                    // _sumfp32_0.val[1] = _sumfp32_10;
-                    // _sumfp32_0.val[2] = _sumfp32_20;
-                    // _sumfp32_0.val[3] = _sumfp32_30;
-                    // float32x4x4_t _sumfp32_1;
-                    // _sumfp32_1.val[0] = _sumfp32_01;
-                    // _sumfp32_1.val[1] = _sumfp32_11;
-                    // _sumfp32_1.val[2] = _sumfp32_21;
-                    // _sumfp32_1.val[3] = _sumfp32_31;
-
-                    // vst4q_f32(outptr, _sumfp32_0);
-                    // vst4q_f32(outptr + 16, _sumfp32_1);
 
                     outptr += 32;
                 }
@@ -1380,7 +1280,6 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
 
         if (num_output_elempack == 1 && out_elempack == 4)
         {
-            fprintf(stderr, "in 1363\n");
             #pragma omp parallel for num_threads(opt.num_threads)
             for (int j = 0; j < outh; j++)
             {
@@ -1453,52 +1352,6 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
                     sum2 = vmv_x_s_i32m1_i32(_sum2_scala);
                     sum3 = vmv_x_s_i32m1_i32(_sum3_scala);
 
-                    // int32x4_t _sum0 = vdupq_n_s32(0);
-                    // int32x4_t _sum1 = vdupq_n_s32(0);
-                    // int32x4_t _sum2 = vdupq_n_s32(0);
-                    // int32x4_t _sum3 = vdupq_n_s32(0);
-                    // for (; i + 7 < num_input; i += 8)
-                    // {
-                    //     int8x8_t _val0 = vld1_s8(m0);
-                    //     int8x8_t _val1 = vld1_s8(m1);
-                    //     int8x8_t _val2 = vld1_s8(m2);
-                    //     int8x8_t _val3 = vld1_s8(m3);
-                    //     int8x8_t _w = vld1_s8(kptr);
-
-                    //     int16x8_t _s0 = vmull_s8(_val0, _w);
-                    //     int16x8_t _s1 = vmull_s8(_val1, _w);
-                    //     int16x8_t _s2 = vmull_s8(_val2, _w);
-                    //     int16x8_t _s3 = vmull_s8(_val3, _w);
-                    //     _sum0 = vaddw_s16(_sum0, vget_low_s16(_s0));
-                    //     _sum1 = vaddw_s16(_sum1, vget_low_s16(_s1));
-                    //     _sum2 = vaddw_s16(_sum2, vget_low_s16(_s2));
-                    //     _sum3 = vaddw_s16(_sum3, vget_low_s16(_s3));
-                    //     _sum0 = vaddw_s16(_sum0, vget_high_s16(_s0));
-                    //     _sum1 = vaddw_s16(_sum1, vget_high_s16(_s1));
-                    //     _sum2 = vaddw_s16(_sum2, vget_high_s16(_s2));
-                    //     _sum3 = vaddw_s16(_sum3, vget_high_s16(_s3));
-
-                    //     m0 += 8;
-                    //     m1 += 8;
-                    //     m2 += 8;
-                    //     m3 += 8;
-                    //     kptr += 8;
-                    // }
-
-                    // sum0 = vaddvq_s32(_sum0);
-                    // sum1 = vaddvq_s32(_sum1);
-                    // sum2 = vaddvq_s32(_sum2);
-                    // sum3 = vaddvq_s32(_sum3);
-
-                    // for (; i < num_input; i++)
-                    // {
-                    //     sum0 += *m0++ * kptr[0];
-                    //     sum1 += *m1++ * kptr[0];
-                    //     sum2 += *m2++ * kptr[0];
-                    //     sum3 += *m3++ * kptr[0];
-                    //     kptr += 1;
-                    // }
-
                     // dequantize and relu
                     float sumfp32_0 = sum0 * scale_in_data[p];
                     float sumfp32_1 = sum1 * scale_in_data[p];
@@ -1534,34 +1387,10 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
                     const signed char* kptr = weight_data_tm.row<const signed char>(p);
                     const signed char* m = bottom_blob_int8_unpacked.row<const signed char>(j);
 
-                    // int32x4_t _sum0 = vdupq_n_s32(0);
-                    // int32x4_t _sum1 = vdupq_n_s32(0);
                     vint32m2_t _sum = vmv_v_x_i32m2(0, vl);
 
                     int i = 0;
-                    // for (; i + 3 < num_input; i += 4)
-                    // {
-                    //     int8x8_t _val0 = vdup_n_s8(m[0]);
-                    //     int8x8_t _val1 = vdup_n_s8(m[1]);
-                    //     int8x8_t _val2 = vdup_n_s8(m[2]);
-                    //     int8x8_t _val3 = vdup_n_s8(m[3]);
 
-                    //     int8x16_t _w0 = vld1q_s8(kptr);
-                    //     int8x16_t _w1 = vld1q_s8(kptr + 16);
-
-                    //     int16x8_t _s0 = vmull_s8(_val0, vget_low_s8(_w0));
-                    //     int16x8_t _s1 = vmull_s8(_val2, vget_low_s8(_w1));
-                    //     _s0 = vmlal_s8(_s0, _val1, vget_high_s8(_w0));
-                    //     _s1 = vmlal_s8(_s1, _val3, vget_high_s8(_w1));
-
-                    //     _sum0 = vaddw_s16(_sum0, vget_low_s16(_s0));
-                    //     _sum1 = vaddw_s16(_sum1, vget_high_s16(_s0));
-                    //     _sum0 = vaddw_s16(_sum0, vget_low_s16(_s1));
-                    //     _sum1 = vaddw_s16(_sum1, vget_high_s16(_s1));
-
-                    //     m += 4;
-                    //     kptr += 32;
-                    // }
                     vl = 8;
                     for (; i < num_input; i++)
                     {
@@ -1576,46 +1405,28 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
 
                         _sum = vwadd_wv_i32m2(_sum, _s0, vl);
 
-                        // int16x8_t _s0 = vmull_s8(_val, _w);
-                        // _sum0 = vaddw_s16(_sum0, vget_low_s16(_s0));
-                        // _sum1 = vaddw_s16(_sum1, vget_high_s16(_s0));
-
                         m++;
                         kptr += 8;
                     }
 
                     // dequantize and relu
-                    // float32x4_t _scale_in0 = vld1q_f32((const float*)scale_in_data + p * 8);
-                    // float32x4_t _scale_in1 = vld1q_f32((const float*)scale_in_data + p * 8 + 4);
                     vfloat32m2_t _scale_in = vle32_v_f32m2((const float*)scale_in_data + p * 8, vl);
-
                     vfloat32m2_t _sumfp32 = vfcvt_f_x_v_f32m2(_sum, vl);
-
-                    // float32x4_t _sumfp32_0 = vcvtq_f32_s32(_sum0);
-                    // float32x4_t _sumfp32_1 = vcvtq_f32_s32(_sum1);
 
                     if (bias_term)
                     {
                         vfloat32m2_t _bias = vle32_v_f32m2((const float*)bias_data + p * 8, vl);
                         _sumfp32 = vfmacc_vv_f32m2(_bias, _sumfp32, _scale_in, vl);
-                        // float32x4_t _bias0 = vld1q_f32((const float*)bias_data + p * 8);
-                        // float32x4_t _bias1 = vld1q_f32((const float*)bias_data + p * 8 + 4);
-                        // _sumfp32_0 = vmlaq_f32(_bias0, _sumfp32_0, _scale_in0);
-                        // _sumfp32_1 = vmlaq_f32(_bias1, _sumfp32_1, _scale_in1);
                     }
                     else
                     {
                         _sumfp32 = vfmul_vv_f32m2(_sumfp32, _scale_in, vl);
-                        // _sumfp32_0 = vmulq_f32(_sumfp32_0, _scale_in0);
-                        // _sumfp32_1 = vmulq_f32(_sumfp32_1, _scale_in1);
                     }
 
                     // _sumfp32_0 = activation_ps(_sumfp32_0, activation_type, activation_params, vl);
                     _sumfp32 = activation_ps(_sumfp32, activation_type, activation_params, vl);
 
                     vse32_v_f32m2(outptr, _sumfp32, vl);
-                    // vst1q_f32(outptr, _sumfp32_0);
-                    // vst1q_f32(outptr + 4, _sumfp32_1);
                     outptr += 8;
                 }
             }
@@ -1624,7 +1435,6 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
 
         if (num_output_elempack == 1 && out_elempack == 1)
         {
-            fprintf(stderr, "I think I am here\n");
             #pragma omp parallel for num_threads(opt.num_threads)
             for (int j = 0; j < outh; j++)
             {
@@ -1651,8 +1461,6 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
                         vint16m2_t _s = vwmul_vv_i16m2(_val, _w, vl);
                         _sum = vwadd_wv_i32m4(_sum, _s, vl);
 
-                        // sum += vfmv_f_s_f32m1_f32(_sum);
-
                         m += vl;
                         kptr += vl;
                         n -= vl;
@@ -1662,23 +1470,6 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
                     _sum_scala = vredsum_vs_i32m4_i32m1(_sum_scala, _sum, _sum_scala, vl);
                     sum = vmv_x_s_i32m1_i32(_sum_scala);
 
-                    // int32x4_t _sum0 = vdupq_n_s32(0);
-                    // int32x4_t _sum1 = vdupq_n_s32(0);
-                    // for (; i + 7 < num_input; i += 8)
-                    // {
-                    //     int8x8_t _val = vld1_s8(m);
-                    //     int8x8_t _w = vld1_s8(kptr);
-
-                    //     int16x8_t _s0 = vmull_s8(_val, _w);
-                    //     _sum0 = vaddw_s16(_sum0, vget_low_s16(_s0));
-                    //     _sum1 = vaddw_s16(_sum1, vget_high_s16(_s0));
-
-                    //     m += 8;
-                    //     kptr += 8;
-                    // }
-
-                    // _sum0 = vaddq_s32(_sum0, _sum1);
-                    // sum = vaddvq_s32(_sum0);
 #endif // __riscv_vector         
 
 // for (; i < num_input; i++) \
@@ -1718,8 +1509,6 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
         out_elempack = num_output % 8 == 0 ? 8 : 1;
     }
 #endif
-    fprintf(stderr, "num_output = %d\n", num_output);
-    fprintf(stderr, "out_elempack = %d\n", out_elempack);
 
     top_blob.create(num_output / out_elempack, (size_t)(4u * out_elempack), out_elempack, opt.blob_allocator);
     if (top_blob.empty())
@@ -1728,7 +1517,6 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
 #if __riscv_vector
     if (out_elempack == 8)
     {
-        fprintf(stderr, "in 1703\n");
         // num_output
         #pragma omp parallel for num_threads(opt.num_threads)
         for (int p = 0; p < num_output / out_elempack; p++)
@@ -1739,106 +1527,45 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
             vl = 8;
 
             vint32m2_t _sum0 = vmv_v_x_i32m2(0, vl);
-            // int32x4_t _sum0 = vdupq_n_s32(0);
-            // int32x4_t _sum1 = vdupq_n_s32(0);
 
             int i = 0;
-            // for (; i + 1 < num_input; i += 2)
-            // {
-            //     int8x8_t _val0 = vdup_n_s8(sptr[0]);
-            //     int8x8_t _val1 = vdup_n_s8(sptr[1]);
-
-            //     int8x8_t _w0 = vld1_s8(kptr);
-            //     int8x8_t _w1 = vld1_s8(kptr + 8);
-
-            //     int16x8_t _s0 = vmull_s8(_val0, _w0);
-            //     _s0 = vmlal_s8(_s0, _val1, _w1);
-
-            //     _sum0 = vaddw_s16(_sum0, vget_low_s16(_s0));
-            //     _sum1 = vaddw_s16(_sum1, vget_high_s16(_s0));
-
-            //     sptr += 2;
-            //     kptr += 16;
-            // }
             for (; i < num_input; i++)
             {
                 vint8m1_t _val = vmv_v_x_i8m1(sptr[0], vl);
                 vint8m1_t _w = vle8_v_i8m1(kptr, vl);
-                print_vint8m1(_w, 8);
-                fprintf(stderr, "====================\n");
-
 
                 vint16m1_t _s = vget_v_i16m2_i16m1(vwmul_vv_i16m2(_val, _w, vl), 0);
                 _sum0 = vwadd_wv_i32m2(_sum0, _s, vl);
-
-                // int8x8_t _val = vdup_n_s8(sptr[0]);
-
-                // int8x8_t _w = vld1_s8(kptr);
-
-                // int16x8_t _s0 = vmull_s8(_val, _w);
-                // _sum0 = vaddw_s16(_sum0, vget_low_s16(_s0));
-                // _sum1 = vaddw_s16(_sum1, vget_high_s16(_s0));
 
                 sptr += 1;
                 kptr += 8;
             }
 
             // dequantize and relu
-
-            // float32x4_t _scale_in0 = vld1q_f32((const float*)scale_in_data + p * 8);
-            // float32x4_t _scale_in1 = vld1q_f32((const float*)scale_in_data + p * 8 + 4);
-            print_vint32m2(_sum0, 8);
-
             vfloat32m2_t _scale_in = vle32_v_f32m2((const float*)scale_in_data + p * 8, vl);
 
             vfloat32m2_t _sumfp32 = vfcvt_f_x_v_f32m2(_sum0, vl);
-            // float32x4_t _sumfp32_0 = vcvtq_f32_s32(_sum0);
-            // float32x4_t _sumfp32_1 = vcvtq_f32_s32(_sum1);
 
             if (bias_term)
             {
-                fprintf(stderr, "Has bias\n");
                 vfloat32m2_t _bias = vle32_v_f32m2((const float*)bias_data + p * 8, vl);
-                fprintf(stderr, "======print _bias======\n");
-                print_vfloat32m2(_bias, 8);
-
-                fprintf(stderr, "======print _scale_in======\n");
-                print_vfloat32m2(_scale_in, 8);
-
                 _sumfp32 = vfmacc_vv_f32m2(_bias, _sumfp32, _scale_in, vl);
-                // float32x4_t _bias0 = vld1q_f32((const float*)bias_data + p * 8);
-                // float32x4_t _bias1 = vld1q_f32((const float*)bias_data + p * 8 + 4);
-                // _sumfp32_0 = vmlaq_f32(_bias0, _sumfp32_0, _scale_in0);
-                // _sumfp32_1 = vmlaq_f32(_bias1, _sumfp32_1, _scale_in1);
             }
             else
             {
                 _sumfp32 = vfmul_vv_f32m2(_sumfp32, _scale_in, vl);
-                // _sumfp32_0 = vmulq_f32(_sumfp32_0, _scale_in0);
-                // _sumfp32_1 = vmulq_f32(_sumfp32_1, _scale_in1);
             }
-            fprintf(stderr, "print _sumfp32\n");
-            print_vfloat32m2(_sumfp32);
-            fprintf(stderr, "activation_type: %d\n", activation_type);
 
             _sumfp32 = activation_ps(_sumfp32, activation_type, activation_params, vl);
-            fprintf(stderr, "print _sumfp32 after activate\n");
-            print_vfloat32m2(_sumfp32);
-            // _sumfp32_1 = activation_ps(_sumfp32_1, activation_type, activation_params, vl);
 
             float* outptr = (float*)top_blob + p * 8;
             vse32_v_f32m2(outptr, _sumfp32, vl);
-            // vst1q_f32(outptr, _sumfp32_0);
-            // vst1q_f32(outptr + 4, _sumfp32_1);
         }
     }
 #endif // __riscv_vector
 
     if (out_elempack == 1)
     {
-        
-        fprintf(stderr, "in 1795\n");
-        fprintf(stderr, "out_elempack == 1 version\n");
         // num_output
         #pragma omp parallel for num_threads(opt.num_threads)
         for (int p = 0; p < num_output / out_elempack; p++)
@@ -1852,26 +1579,19 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
             for (; i < num_input; i++)
             {
                 signed char val = sptr[0];
-
                 signed char w = kptr[0];
-                fprintf(stderr, "val = %d, w = %d\n", val, w);
 
                 sum += val * w;
 
                 sptr += 1;
                 kptr += 1;
             }
-            fprintf(stderr, "sum = %d\n", sum);
-
             // dequantize and relu
             float sumfp32 = sum * scale_in_data[p];
 
             if (bias_term)
                 sumfp32 += bias_data[p];
-            fprintf(stderr, "sumfp32 = %f\n", sumfp32);
-
             sumfp32 = activation_ss(sumfp32, activation_type, activation_params);
-            fprintf(stderr, "sumfp32 after activation = %f\n", sumfp32);
 
             top_blob[p] = sumfp32;
 

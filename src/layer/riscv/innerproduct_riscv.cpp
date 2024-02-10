@@ -53,7 +53,7 @@ int InnerProduct_riscv::create_pipeline(const Option& opt)
     if (opt.use_int8_inference && weight_data.elemsize == (size_t)1u)
     {
         // TODO implement int8
-        return 0;
+        return create_pipeline_int8(opt);
     }
 #endif
 
@@ -128,27 +128,27 @@ int InnerProduct_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Opt
 #if NCNN_INT8
     if (opt.use_int8_inference && int8_scale_term)
     {
-        Mat bottom_blob_unpacked = bottom_blob;
-        if (bottom_blob.elempack != 1)
-        {
-            Option opt_pack1 = opt;
-            opt_pack1.blob_allocator = opt.workspace_allocator;
+        // Mat bottom_blob_unpacked = bottom_blob;
+        // if (bottom_blob.elempack != 1)
+        // {
+        //     Option opt_pack1 = opt;
+        //     opt_pack1.blob_allocator = opt.workspace_allocator;
 
-            convert_packing(bottom_blob, bottom_blob_unpacked, 1, opt_pack1);
-        }
+        //     convert_packing(bottom_blob, bottom_blob_unpacked, 1, opt_pack1);
+        // }
 
-        Mat bottom_blob_unpacked_fp32 = bottom_blob_unpacked;
-        if (bottom_blob_unpacked.elembits() == 16)
-        {
-            Option opt_pack1 = opt;
-            opt_pack1.blob_allocator = opt.workspace_allocator;
+        // Mat bottom_blob_unpacked_fp32 = bottom_blob_unpacked;
+        // if (bottom_blob_unpacked.elembits() == 16)
+        // {
+        //     Option opt_pack1 = opt;
+        //     opt_pack1.blob_allocator = opt.workspace_allocator;
 
-            cast_float16_to_float32(bottom_blob_unpacked, bottom_blob_unpacked_fp32, opt_pack1);
-        }
+        //     cast_float16_to_float32(bottom_blob_unpacked, bottom_blob_unpacked_fp32, opt_pack1);
+        // }
 
-        Option opt_unpacked = opt;
-        opt_unpacked.use_packing_layout = false;
-        return InnerProduct::forward_int8(bottom_blob_unpacked_fp32, top_blob, opt_unpacked);
+        // Option opt_unpacked = opt;
+        // opt_unpacked.use_packing_layout = false;
+        return forward_int8(bottom_blob, top_blob, opt);
     }
 #endif
 
@@ -1144,6 +1144,7 @@ int InnerProduct_riscv::create_pipeline_int8(const Option& opt)
 
 int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, const Option& opt) const
 {
+    fprintf(stderr, "InnerProduct_riscv::forward_int8\n");
     int vl;
     const int num_input = weight_data_size / num_output;
 
@@ -1192,6 +1193,7 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
 #if __riscv_vector
         if (num_output_elempack == 8 && out_elempack == 4)
         {
+            fprintf(stderr, "in 1195\n");
             #pragma omp parallel for num_threads(opt.num_threads)
             for (int j = 0; j < outh; j++)
             {
@@ -1359,6 +1361,7 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
 
         if (num_output_elempack == 1 && out_elempack == 4)
         {
+            fprintf(stderr, "in 1363\n");
             #pragma omp parallel for num_threads(opt.num_threads)
             for (int j = 0; j < outh; j++)
             {
@@ -1494,6 +1497,7 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
 
         if (num_output_elempack == 8 && out_elempack == 1)
         {
+                        fprintf(stderr, "in 1499\n");
             #pragma omp parallel for num_threads(opt.num_threads)
             for (int j = 0; j < outh; j++)
             {
@@ -1594,6 +1598,7 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
 
         if (num_output_elempack == 1 && out_elempack == 1)
         {
+            fprintf(stderr, "I think I am here\n");
             #pragma omp parallel for num_threads(opt.num_threads)
             for (int j = 0; j < outh; j++)
             {
@@ -1648,7 +1653,8 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
 
                     // _sum0 = vaddq_s32(_sum0, _sum1);
                     // sum = vaddvq_s32(_sum0);
-#endif // __riscv_vector          \
+#endif // __riscv_vector         
+
 // for (; i < num_input; i++) \
 // {                          \
 //     sum += *m++ * *kptr++; \

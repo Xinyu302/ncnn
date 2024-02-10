@@ -1151,6 +1151,16 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
     int elembits = bottom_blob.elembits();
 
     Mat bottom_blob_int8 = bottom_blob;
+    fprintf(stderr, "elembits: %d\n", elembits);
+    fprintf(stderr, "bottom_blob.dims: %d\n", bottom_blob.dims);
+    // print w, h, d, c
+    fprintf(stderr, "bottom_blob.w: %d\n", bottom_blob.w);
+    fprintf(stderr, "bottom_blob.h: %d\n", bottom_blob.h);
+    fprintf(stderr, "bottom_blob.c: %d\n", bottom_blob.c);
+    fprintf(stderr, "bottom_blob.elemsize: %d\n", bottom_blob.elemsize);
+    fprintf(stderr, "bottom_blob.elempack: %d\n", bottom_blob.elempack);
+
+
     if (elembits != 8)
     {
         Option opt_q = opt;
@@ -1158,8 +1168,17 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
         quantize_to_int8(bottom_blob, bottom_blob_int8, bottom_blob_int8_scales, opt_q);
     }
 
+    fprintf(stderr, "bottom_blob_int8.dims: %d\n", bottom_blob_int8.dims);
+    fprintf(stderr, "bottom_blob_int8.w: %d\n", bottom_blob_int8.w);
+    fprintf(stderr, "bottom_blob_int8.h: %d\n", bottom_blob_int8.h);
+    fprintf(stderr, "bottom_blob_int8.c: %d\n", bottom_blob_int8.c);
+    fprintf(stderr, "bottom_blob_int8.elemsize: %d\n", bottom_blob_int8.elemsize);
+    fprintf(stderr, "bottom_blob_int8.elempack: %d\n", bottom_blob_int8.elempack);
+
+
     if (bottom_blob_int8.dims == 2 && bottom_blob_int8.w == num_input)
     {
+        fprintf(stderr, "in 1163\n");
         // gemm
         Mat bottom_blob_int8_unpacked;
         Option opt_unpack = opt;
@@ -1296,10 +1315,10 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
                     if (bias_term)
                     {
                         vfloat32m2_t _bias = vle32_v_f32m2((const float*)bias_data + p * 8, vl);
-                        _sumfp32_0 = vfmacc_vv_f32m2(_sumfp32_0, _scale_in, _bias, vl);
-                        _sumfp32_1 = vfmacc_vv_f32m2(_sumfp32_1, _scale_in, _bias, vl);
-                        _sumfp32_2 = vfmacc_vv_f32m2(_sumfp32_2, _scale_in, _bias, vl);
-                        _sumfp32_3 = vfmacc_vv_f32m2(_sumfp32_3, _scale_in, _bias, vl);
+                        _sumfp32_0 = vfmacc_vv_f32m2(_bias, _sumfp32_0, _scale_in, vl);
+                        _sumfp32_1 = vfmacc_vv_f32m2(_bias, _sumfp32_1, _scale_in, vl);
+                        _sumfp32_2 = vfmacc_vv_f32m2(_bias, _sumfp32_2, _scale_in, vl);
+                        _sumfp32_3 = vfmacc_vv_f32m2(_bias, _sumfp32_3, _scale_in, vl);
 
                         // float32x4_t _bias0 = vld1q_f32((const float*)bias_data + p * 8);
                         // float32x4_t _bias1 = vld1q_f32((const float*)bias_data + p * 8 + 4);
@@ -1497,7 +1516,7 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
 
         if (num_output_elempack == 8 && out_elempack == 1)
         {
-                        fprintf(stderr, "in 1499\n");
+            fprintf(stderr, "in 1499\n");
             #pragma omp parallel for num_threads(opt.num_threads)
             for (int j = 0; j < outh; j++)
             {
@@ -1571,7 +1590,7 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
                     if (bias_term)
                     {
                         vfloat32m2_t _bias = vle32_v_f32m2((const float*)bias_data + p * 8, vl);
-                        _sumfp32 = vfmacc_vv_f32m2(_sumfp32, _scale_in, _bias, vl);
+                        _sumfp32 = vfmacc_vv_f32m2(_bias, _sumfp32, _scale_in, vl);
                         // float32x4_t _bias0 = vld1q_f32((const float*)bias_data + p * 8);
                         // float32x4_t _bias1 = vld1q_f32((const float*)bias_data + p * 8 + 4);
                         // _sumfp32_0 = vmlaq_f32(_bias0, _sumfp32_0, _scale_in0);
@@ -1692,6 +1711,8 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
         out_elempack = num_output % 8 == 0 ? 8 : 1;
     }
 #endif
+    fprintf(stderr, "num_output = %d\n", num_output);
+    fprintf(stderr, "out_elempack = %d\n", out_elempack);
 
     top_blob.create(num_output / out_elempack, (size_t)(4u * out_elempack), out_elempack, opt.blob_allocator);
     if (top_blob.empty())
@@ -1700,6 +1721,7 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
 #if __riscv_vector
     if (out_elempack == 8)
     {
+        fprintf(stderr, "in 1703\n");
         // num_output
         #pragma omp parallel for num_threads(opt.num_threads)
         for (int p = 0; p < num_output / out_elempack; p++)
@@ -1735,6 +1757,9 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
             {
                 vint8m1_t _val = vmv_v_x_i8m1(sptr[0], vl);
                 vint8m1_t _w = vle8_v_i8m1(kptr, vl);
+                print_vint8m1(_w, 8);
+                fprintf(stderr, "====================\n");
+
 
                 vint16m1_t _s = vget_v_i16m2_i16m1(vwmul_vv_i16m2(_val, _w, vl), 0);
                 _sum0 = vwadd_wv_i32m2(_sum0, _s, vl);
@@ -1755,6 +1780,7 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
 
             // float32x4_t _scale_in0 = vld1q_f32((const float*)scale_in_data + p * 8);
             // float32x4_t _scale_in1 = vld1q_f32((const float*)scale_in_data + p * 8 + 4);
+            print_vint32m2(_sum0, 8);
 
             vfloat32m2_t _scale_in = vle32_v_f32m2((const float*)scale_in_data + p * 8, vl);
 
@@ -1764,8 +1790,15 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
 
             if (bias_term)
             {
+                fprintf(stderr, "Has bias\n");
                 vfloat32m2_t _bias = vle32_v_f32m2((const float*)bias_data + p * 8, vl);
-                _sumfp32 = vfmacc_vv_f32m2(_sumfp32, _scale_in, _bias, vl);
+                fprintf(stderr, "======print _bias======\n");
+                print_vfloat32m2(_bias, 8);
+
+                fprintf(stderr, "======print _scale_in======\n");
+                print_vfloat32m2(_scale_in, 8);
+
+                _sumfp32 = vfmacc_vv_f32m2(_bias, _sumfp32, _scale_in, vl);
                 // float32x4_t _bias0 = vld1q_f32((const float*)bias_data + p * 8);
                 // float32x4_t _bias1 = vld1q_f32((const float*)bias_data + p * 8 + 4);
                 // _sumfp32_0 = vmlaq_f32(_bias0, _sumfp32_0, _scale_in0);
@@ -1777,8 +1810,13 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
                 // _sumfp32_0 = vmulq_f32(_sumfp32_0, _scale_in0);
                 // _sumfp32_1 = vmulq_f32(_sumfp32_1, _scale_in1);
             }
+            fprintf(stderr, "print _sumfp32\n");
+            print_vfloat32m2(_sumfp32);
+            fprintf(stderr, "activation_type: %d\n", activation_type);
 
             _sumfp32 = activation_ps(_sumfp32, activation_type, activation_params, vl);
+            fprintf(stderr, "print _sumfp32 after activate\n");
+            print_vfloat32m2(_sumfp32);
             // _sumfp32_1 = activation_ps(_sumfp32_1, activation_type, activation_params, vl);
 
             float* outptr = (float*)top_blob + p * 8;
@@ -1791,6 +1829,9 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
 
     if (out_elempack == 1)
     {
+        
+        fprintf(stderr, "in 1795\n");
+        fprintf(stderr, "out_elempack == 1 version\n");
         // num_output
         #pragma omp parallel for num_threads(opt.num_threads)
         for (int p = 0; p < num_output / out_elempack; p++)
@@ -1806,22 +1847,27 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
                 signed char val = sptr[0];
 
                 signed char w = kptr[0];
+                fprintf(stderr, "val = %d, w = %d\n", val, w);
 
                 sum += val * w;
 
                 sptr += 1;
                 kptr += 1;
             }
+            fprintf(stderr, "sum = %d\n", sum);
 
             // dequantize and relu
             float sumfp32 = sum * scale_in_data[p];
 
             if (bias_term)
                 sumfp32 += bias_data[p];
+            fprintf(stderr, "sumfp32 = %f\n", sumfp32);
 
             sumfp32 = activation_ss(sumfp32, activation_type, activation_params);
+            fprintf(stderr, "sumfp32 after activation = %f\n", sumfp32);
 
             top_blob[p] = sumfp32;
+
         }
     }
 

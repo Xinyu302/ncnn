@@ -31,18 +31,6 @@ Dequantize_riscv::Dequantize_riscv()
 #endif // __riscv_vector
 }
 
-static void print_vfloat32m8(vfloat32m8_t v, int n)
-{
-    float* ptr = (float*)malloc(n * sizeof(float));
-    vse32_v_f32m8(ptr, v, n);
-    for (int i = 0; i < n; i++)
-    {
-        fprintf(stderr, "%f ", ptr[i]);
-    }
-    fprintf(stderr, "\n");
-    free(ptr);
-}
-
 int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Option& opt) const
 {
     int vl;

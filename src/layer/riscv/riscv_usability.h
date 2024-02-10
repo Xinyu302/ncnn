@@ -74,7 +74,6 @@ static inline int64_t float2int8(vfloat16m1_t _v)
 }
 #endif // __riscv_zfh
 
-
 static inline int64_t float2int8(vfloat32m1_t _vlow, vfloat32m1_t _vhigh)
 {
     int vl = vsetvlmax_e32m1();

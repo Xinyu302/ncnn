@@ -934,7 +934,6 @@ int Quantize_riscv::forward_fp16sa(const Mat& bottom_blob, Mat& top_blob, const 
 
             if (scale_data_size == 1)
             {
-
                 __fp16 _scale = (__fp16)scale_data[0];
 
                 #pragma omp parallel for num_threads(opt.num_threads)
@@ -977,7 +976,6 @@ int Quantize_riscv::forward_fp16sa(const Mat& bottom_blob, Mat& top_blob, const 
 
             if (scale_data_size == 1)
             {
-
                 __fp16 _scale = (__fp16)scale_data[0];
 
                 #pragma omp parallel for num_threads(opt.num_threads)
@@ -1008,11 +1006,10 @@ int Quantize_riscv::forward_fp16sa(const Mat& bottom_blob, Mat& top_blob, const 
                     signed char* outptr0 = top_blob.row<signed char>(i);
 
                     vl = 8;
-                     vfloat16m1_t _scale = vfncvt_f_f_w_f16m1(vle32_v_f32m2((const float*)scale_data + i * 8, vl), vl);                    // float16x8_t _scale = vcombine_f16(vcvt_f16_f32(vld1q_f32((const float*)scale_data + i * 8)), vcvt_f16_f32(vld1q_f32((const float*)scale_data + i * 8 + 4)));
+                    vfloat16m1_t _scale = vfncvt_f_f_w_f16m1(vle32_v_f32m2((const float*)scale_data + i * 8, vl), vl); // float16x8_t _scale = vcombine_f16(vcvt_f16_f32(vld1q_f32((const float*)scale_data + i * 8)), vcvt_f16_f32(vld1q_f32((const float*)scale_data + i * 8 + 4)));
 
                     for (int j = 0; j < w; j++)
                     {
-                        
                         vfloat16m1_t _v = vle16_v_f16m1(ptr0, vl);
                         _v = vfmul_vv_f16m1(_v, _scale, vl);
                         *(int64_t*)outptr0 = float2int8(_v);
@@ -1037,7 +1034,6 @@ int Quantize_riscv::forward_fp16sa(const Mat& bottom_blob, Mat& top_blob, const 
 
             if (scale_data_size == 1)
             {
-
                 __fp16 _scale = (__fp16)scale_data[0];
 
                 #pragma omp parallel for num_threads(opt.num_threads)

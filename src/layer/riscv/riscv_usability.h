@@ -58,6 +58,22 @@ static inline int csrr_vlenb()
     return a;
 }
 
+#if __riscv_zfh
+static inline int64_t float2int8(vfloat16m1_t _v)
+{
+    int vl = vsetvlmax_e16m1();
+    vint16m2_t _v16 = vundefined_i16m2();
+    _v16 = vset_v_i16m1_i16m2(_v16, 0, vfcvt_x_f_v_i16m1(_v, vl));
+    vint8m1_t _v8 = vnclip_wx_i8m1(_v16, 0, vl);
+    int64_t _ret;
+    vse8_v_i8m1((int8_t*)&_ret, _v8, vl);
+    return _ret;
+    // int16x8_t _v16 = vcvtaq_s16_f16(_v);
+    // int8x8_t _v8 = vqmovn_s16(_v16);
+    // return vmax_s8(_v8, vdup_n_s8(-127));
+}
+#endif // __riscv_zfh
+
 static inline int64_t float2int8(vfloat32m1_t _vlow, vfloat32m1_t _vhigh)
 {
     int vl = vsetvlmax_e32m1();

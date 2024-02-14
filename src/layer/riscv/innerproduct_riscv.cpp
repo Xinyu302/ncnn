@@ -1131,6 +1131,9 @@ int InnerProduct_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, cons
     int elembits = bottom_blob.elembits();
 
     Mat bottom_blob_int8 = bottom_blob;
+    fprintf(stderr, "InnerProduct_riscv::forward_int8\n");
+    fprintf(stderr, "elembits = %d\n", elembits);
+    fprintf(stderr, "elepack = %d\n", bottom_blob.elempack);
 
     if (elembits != 8)
     {

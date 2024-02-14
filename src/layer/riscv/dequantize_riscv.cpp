@@ -1,5 +1,6 @@
 // Tencent is pleased to support the open source community by making ncnn available.
 //
+// Copyright (C) 2024 Xinyu302. All rights reserved.
 // Copyright (C) 2019 BUG1989. All rights reserved.
 // Copyright (C) 2018 THL A29 Limited, a Tencent company. All rights reserved.
 //

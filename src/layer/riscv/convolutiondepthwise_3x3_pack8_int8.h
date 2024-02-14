@@ -107,10 +107,10 @@ static void convdw3x3s1_pack8_int8_rvv(const Mat& bottom_blob, Mat& top_blob, co
                 // _s1 = vmlal_s8(_s1, _r12, _k12);
                 // _s2 = vmlal_s8(_s2, _r20, _k20);
                 // _s3 = vmlal_s8(_s3, _r21, _k21);
-                
+
                 vint16m2_t _s4 = vwmul_vv_i16m2(_r22, _k22, vl);
                 // int16x8_t _s4 = vmull_s8(_r22, _k22);
-                
+
                 vint16m1_t _s0_m1 = vget_v_i16m2_i16m1(_s0, 0);
                 vint16m1_t _s1_m1 = vget_v_i16m2_i16m1(_s1, 0);
                 vint16m1_t _s2_m1 = vget_v_i16m2_i16m1(_s2, 0);
@@ -231,8 +231,6 @@ static void convdw3x3s2_pack8_int8_rvv(const Mat& bottom_blob, Mat& top_blob, co
                 _s3 = vwmacc_vv_i16m2(_s3, _r21, _k21, vl);
 
                 vint16m2_t _s4 = vwmul_vv_i16m2(_r22, _k22, vl);
-
-
 
                 // int16x8_t _s0 = vmull_s8(_r00, _k00);
                 // int16x8_t _s1 = vmull_s8(_r01, _k01);

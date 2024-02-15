@@ -15,7 +15,7 @@
 #define _PADDING_PACKN_RVV(SEW, TSEW, LMUL, T, VT)                                                                                          \
     static void padding_constant_packn_##VT##_rvv(const Mat& src, Mat& dst, int top, int bottom, int left, int right, v##VT##m##LMUL##_t v) \
     {                                                                                                                                       \
-        int packn = csrr_vlenb() / sizeof(T);                                                                                         \
+        int packn = csrr_vlenb() / sizeof(T);                                                                                               \
         if (packn > 8) packn = 8;                                                                                                           \
         const size_t vl = vsetvl_e##SEW##m##LMUL(packn);                                                                                    \
                                                                                                                                             \
@@ -65,7 +65,7 @@
                                                                                                                                             \
     static void padding_replicate_packn_##VT##_rvv(const Mat& src, Mat& dst, int top, int bottom, int left, int right)                      \
     {                                                                                                                                       \
-        int packn = csrr_vlenb() / sizeof(T);                                                                                         \
+        int packn = csrr_vlenb() / sizeof(T);                                                                                               \
         if (packn > 8) packn = 8;                                                                                                           \
         const size_t vl = vsetvl_e##SEW##m##LMUL(packn);                                                                                    \
                                                                                                                                             \
@@ -145,7 +145,7 @@
                                                                                                                                             \
     static void padding_reflect_packn_##VT##_rvv(const Mat& src, Mat& dst, int top, int bottom, int left, int right)                        \
     {                                                                                                                                       \
-        int packn = csrr_vlenb() / sizeof(T);                                                                                         \
+        int packn = csrr_vlenb() / sizeof(T);                                                                                               \
         if (packn > 8) packn = 8;                                                                                                           \
         const size_t vl = vsetvl_e##SEW##m##LMUL(packn);                                                                                    \
                                                                                                                                             \

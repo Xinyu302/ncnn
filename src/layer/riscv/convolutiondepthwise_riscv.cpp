@@ -361,7 +361,7 @@ int ConvolutionDepthWise_riscv::forward(const Mat& bottom_blob, Mat& top_blob, c
                     }
                 }
 
-#pragma omp parallel for num_threads(opt.num_threads)
+                #pragma omp parallel for num_threads(opt.num_threads)
                 for (int g = 0; g < channels; g++)
                 {
                     float* outptr = top_blob.channel(g);
@@ -443,7 +443,7 @@ int ConvolutionDepthWise_riscv::forward(const Mat& bottom_blob, Mat& top_blob, c
                     }
                 }
 
-#pragma omp parallel for num_threads(opt.num_threads)
+                #pragma omp parallel for num_threads(opt.num_threads)
                 for (int g = 0; g < group; g++)
                 {
                     float* outptr = top_blob.channel(g);
@@ -738,7 +738,7 @@ int ConvolutionDepthWise_riscv::forward_fp16s(const Mat& bottom_blob, Mat& top_b
                     }
                 }
 
-#pragma omp parallel for num_threads(opt.num_threads)
+                #pragma omp parallel for num_threads(opt.num_threads)
                 for (int g = 0; g < channels; g++)
                 {
                     __fp16* outptr = top_blob.channel(g);
@@ -800,7 +800,7 @@ int ConvolutionDepthWise_riscv::forward_fp16s(const Mat& bottom_blob, Mat& top_b
                     }
                 }
 
-#pragma omp parallel for num_threads(opt.num_threads)
+                #pragma omp parallel for num_threads(opt.num_threads)
                 for (int g = 0; g < group; g++)
                 {
                     __fp16* outptr = top_blob.channel(g);
@@ -985,7 +985,7 @@ int ConvolutionDepthWise_riscv::forward_fp16sa(const Mat& bottom_blob, Mat& top_
                     }
                 }
 
-#pragma omp parallel for num_threads(opt.num_threads)
+                #pragma omp parallel for num_threads(opt.num_threads)
                 for (int g = 0; g < channels; g++)
                 {
                     __fp16* outptr = top_blob.channel(g);
@@ -1047,7 +1047,7 @@ int ConvolutionDepthWise_riscv::forward_fp16sa(const Mat& bottom_blob, Mat& top_
                     }
                 }
 
-#pragma omp parallel for num_threads(opt.num_threads)
+                #pragma omp parallel for num_threads(opt.num_threads)
                 for (int g = 0; g < group; g++)
                 {
                     __fp16* outptr = top_blob.channel(g);
@@ -1361,7 +1361,7 @@ int ConvolutionDepthWise_riscv::forward_int8(const Mat& bottom_blob, Mat& top_bl
                     }
                 }
 
-#pragma omp parallel for num_threads(opt.num_threads)
+                #pragma omp parallel for num_threads(opt.num_threads)
                 for (int g = 0; g < channels; g++)
                 {
                     signed char* outptr_s8 = top_blob.channel(g);
@@ -1609,7 +1609,7 @@ int ConvolutionDepthWise_riscv::forward_int8(const Mat& bottom_blob, Mat& top_bl
             return -100;
     }
 
-#pragma omp parallel for num_threads(opt.num_threads)
+    #pragma omp parallel for num_threads(opt.num_threads)
     for (int g = 0; g < group; g++)
     {
         const Mat bottom_blob_bordered_g = bottom_blob_bordered_unpacked.channel_range(channels_g * g / g_elempack, channels_g / g_elempack);

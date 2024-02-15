@@ -1264,6 +1264,7 @@ int ConvolutionDepthWise_riscv::forward_int8(const Mat& bottom_blob, Mat& top_bl
             return -100;
 
         fprintf(stderr, "kernel_w = %d, kernel_h = %d, dilation_w = %d, dilation_h = %d, stride_w = %d, stride_h = %d, activation_type = %d\n", kernel_w, kernel_h, dilation_w, dilation_h, stride_w, stride_h, activation_type);
+        fprintf(stderr, "elempack = %d, out_elempack = %d\n", elempack, out_elempack);
 
 #if __riscv_vector
         if (elempack == 8)

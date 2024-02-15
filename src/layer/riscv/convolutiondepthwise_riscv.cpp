@@ -361,7 +361,7 @@ int ConvolutionDepthWise_riscv::forward(const Mat& bottom_blob, Mat& top_blob, c
                     }
                 }
 
-                #pragma omp parallel for num_threads(opt.num_threads)
+#pragma omp parallel for num_threads(opt.num_threads)
                 for (int g = 0; g < channels; g++)
                 {
                     float* outptr = top_blob.channel(g);
@@ -443,7 +443,7 @@ int ConvolutionDepthWise_riscv::forward(const Mat& bottom_blob, Mat& top_blob, c
                     }
                 }
 
-                #pragma omp parallel for num_threads(opt.num_threads)
+#pragma omp parallel for num_threads(opt.num_threads)
                 for (int g = 0; g < group; g++)
                 {
                     float* outptr = top_blob.channel(g);
@@ -738,7 +738,7 @@ int ConvolutionDepthWise_riscv::forward_fp16s(const Mat& bottom_blob, Mat& top_b
                     }
                 }
 
-                #pragma omp parallel for num_threads(opt.num_threads)
+#pragma omp parallel for num_threads(opt.num_threads)
                 for (int g = 0; g < channels; g++)
                 {
                     __fp16* outptr = top_blob.channel(g);
@@ -800,7 +800,7 @@ int ConvolutionDepthWise_riscv::forward_fp16s(const Mat& bottom_blob, Mat& top_b
                     }
                 }
 
-                #pragma omp parallel for num_threads(opt.num_threads)
+#pragma omp parallel for num_threads(opt.num_threads)
                 for (int g = 0; g < group; g++)
                 {
                     __fp16* outptr = top_blob.channel(g);
@@ -985,7 +985,7 @@ int ConvolutionDepthWise_riscv::forward_fp16sa(const Mat& bottom_blob, Mat& top_
                     }
                 }
 
-                #pragma omp parallel for num_threads(opt.num_threads)
+#pragma omp parallel for num_threads(opt.num_threads)
                 for (int g = 0; g < channels; g++)
                 {
                     __fp16* outptr = top_blob.channel(g);
@@ -1047,7 +1047,7 @@ int ConvolutionDepthWise_riscv::forward_fp16sa(const Mat& bottom_blob, Mat& top_
                     }
                 }
 
-                #pragma omp parallel for num_threads(opt.num_threads)
+#pragma omp parallel for num_threads(opt.num_threads)
                 for (int g = 0; g < group; g++)
                 {
                     __fp16* outptr = top_blob.channel(g);
@@ -1229,8 +1229,10 @@ int ConvolutionDepthWise_riscv::forward_int8(const Mat& bottom_blob, Mat& top_bl
     int outw = (w - kernel_extent_w) / stride_w + 1;
     int outh = (h - kernel_extent_h) / stride_h + 1;
 
+    fprintf(stderr, "bottom_blob_bordered %d %d %d %d %d\n", bottom_blob_bordered.w, bottom_blob_bordered.h, bottom_blob_bordered.c, bottom_blob_bordered.elempack, bottom_blob_bordered.elemsize);
+
     // depth-wise
-    if (channels * elempack == group && group == num_output)
+    if (channels * elempack == group && group == num_output) // depth-wise conv, 逐通道卷积
     {
         int out_elempack = 1;
 #if __riscv_vector
@@ -1240,13 +1242,14 @@ int ConvolutionDepthWise_riscv::forward_int8(const Mat& bottom_blob, Mat& top_bl
         }
 #endif // __riscv_vector
         bool use_int8_requantize = int8_scale_term > 100;
+        fprintf(stderr, "In 1246 use_int8_requantize = %d\n", use_int8_requantize);
         size_t out_elemsize = use_int8_requantize ? 1u * out_elempack : 4u * out_elempack;
-#if NCNN_ARM82
+
         if (support_fp16_storage && opt.use_fp16_storage)
         {
             out_elemsize = use_int8_requantize ? 1u * out_elempack : 2u * out_elempack;
         }
-#endif
+
         if (opt.use_bf16_storage)
             out_elemsize = use_int8_requantize ? 1u * out_elempack : 2u * out_elempack;
 
@@ -1358,7 +1361,7 @@ int ConvolutionDepthWise_riscv::forward_int8(const Mat& bottom_blob, Mat& top_bl
                     }
                 }
 
-                #pragma omp parallel for num_threads(opt.num_threads)
+#pragma omp parallel for num_threads(opt.num_threads)
                 for (int g = 0; g < channels; g++)
                 {
                     signed char* outptr_s8 = top_blob.channel(g);
@@ -1460,192 +1463,85 @@ int ConvolutionDepthWise_riscv::forward_int8(const Mat& bottom_blob, Mat& top_bl
         }
 #endif // __riscv_vector
 
-        //         if (elempack == 1)
-        //         {
-        // #if NCNN_GNU_INLINE_ASM
-        //             if (kernel_w == 3 && kernel_h == 3 && dilation_w == 1 && dilation_h == 1 && stride_w == 1 && stride_h == 1 && (activation_type == 0 || activation_type == 1))
-        //             {
-        //                 if (use_int8_requantize)
-        //                 {
-        //                     std::vector<float> requantize_scales;
-        //                     for (int g = 0; g < group; g++)
-        //                     {
-        //                         float scale_in;
-        //                         if (weight_data_int8_scales[g] == 0)
-        //                             scale_in = 0;
-        //                         else
-        //                             scale_in = 1.f / (bottom_blob_int8_scales[g] * weight_data_int8_scales[g]);
+        if (elempack == 1)
+        {
+            {
+                const int maxk = kernel_w * kernel_h;
 
-        //                         float scale_out = top_blob_int8_scales[g];
+                // kernel offsets
+                std::vector<int> _space_ofs(maxk);
+                int* space_ofs = &_space_ofs[0];
+                {
+                    int p1 = 0;
+                    int p2 = 0;
+                    int gap = w * dilation_h - kernel_w * dilation_w;
+                    for (int i = 0; i < kernel_h; i++)
+                    {
+                        for (int j = 0; j < kernel_w; j++)
+                        {
+                            space_ofs[p1] = p2;
+                            p1++;
+                            p2 += dilation_w;
+                        }
+                        p2 += gap;
+                    }
+                }
 
-        //                         requantize_scales.push_back(scale_in);
-        //                         requantize_scales.push_back(scale_out);
-        //                     }
+                #pragma omp parallel for num_threads(opt.num_threads)
+                for (int g = 0; g < group; g++)
+                {
+                    signed char* outptr_s8 = top_blob.channel(g);
+                    float* outptr_f32 = top_blob.channel(g);
+                    const signed char* kptr = (const signed char*)weight_data_tm + maxk * g;
+                    const Mat m = bottom_blob_bordered.channel(g);
 
-        //                     convdw3x3s1_int8_requant_neon(bottom_blob_bordered, top_blob, weight_data_tm, bias_data, requantize_scales, opt);
-        //                 }
-        //                 else
-        //                 {
-        //                     Mat top_blob_int32;
-        //                     top_blob_int32.create(outw, outh, num_output, (size_t)4u, opt.workspace_allocator);
-        //                     if (top_blob_int32.empty())
-        //                         return -100;
+                    for (int i = 0; i < outh; i++)
+                    {
+                        for (int j = 0; j < outw; j++)
+                        {
+                            int sum = 0;
 
-        //                     convdw3x3s1_int8_neon(bottom_blob_bordered, top_blob_int32, weight_data_tm, opt);
-        //                     //                 convdw3x3s1_int8_dequant_neon(bottom_blob_bordered, top_blob_int32, weight_data_tm, bias_data, dequantize_scales, opt);
+                            const signed char* sptr = m.row<const signed char>(i * stride_h) + j * stride_w;
 
-        //                     Mat scale_data(group);
-        //                     for (int g = 0; g < group; g++)
-        //                     {
-        //                         // dequantize
-        //                         float scale_in;
-        //                         if (weight_data_int8_scales[g] == 0)
-        //                             scale_in = 0;
-        //                         else
-        //                             scale_in = 1.f / (bottom_blob_int8_scales[g] * weight_data_int8_scales[g]);
+                            for (int k = 0; k < maxk; k++)
+                            {
+                                signed char val = sptr[space_ofs[k]];
+                                signed char w = kptr[k];
+                                sum += val * w;
+                            }
 
-        //                         scale_data[g] = scale_in;
-        //                     }
+                            float scale_in;
+                            if (weight_data_int8_scales[g] == 0)
+                                scale_in = 0;
+                            else
+                                scale_in = 1.f / (bottom_blob_int8_scales[g] * weight_data_int8_scales[g]);
 
-        //                     dequantize_from_int32(top_blob_int32, top_blob, scale_data, bias_data, opt);
-        //                 }
+                            float sumfp32 = sum * scale_in;
 
-        //                 if (activation)
-        //                 {
-        //                     activation->forward_inplace(top_blob, opt);
-        //                 }
-        //             }
-        //             else if (kernel_w == 3 && kernel_h == 3 && dilation_w == 1 && dilation_h == 1 && stride_w == 2 && stride_h == 2 && (activation_type == 0 || activation_type == 1))
-        //             {
-        //                 if (use_int8_requantize)
-        //                 {
-        //                     std::vector<float> requantize_scales;
-        //                     for (int g = 0; g < group; g++)
-        //                     {
-        //                         float scale_in;
-        //                         if (weight_data_int8_scales[g] == 0)
-        //                             scale_in = 0;
-        //                         else
-        //                             scale_in = 1.f / (bottom_blob_int8_scales[g] * weight_data_int8_scales[g]);
+                            if (bias_term)
+                                sumfp32 += bias_data[g];
 
-        //                         float scale_out = top_blob_int8_scales[g];
+                            sumfp32 = activation_ss(sumfp32, activation_type, activation_params);
 
-        //                         requantize_scales.push_back(scale_in);
-        //                         requantize_scales.push_back(scale_out);
-        //                     }
-
-        //                     convdw3x3s2_int8_requant_neon(bottom_blob_bordered, top_blob, weight_data_tm, bias_data, requantize_scales, opt);
-        //                 }
-        //                 else
-        //                 {
-        //                     Mat top_blob_int32;
-        //                     top_blob_int32.create(outw, outh, num_output, (size_t)4u, opt.workspace_allocator);
-        //                     if (top_blob_int32.empty())
-        //                         return -100;
-
-        //                     convdw3x3s2_int8_neon(bottom_blob_bordered, top_blob_int32, weight_data_tm, opt);
-        //                     //                 convdw3x3s2_int8_dequant_neon(bottom_blob_bordered, top_blob_int32, weight_data_tm, bias_data, dequantize_scales, opt);
-
-        //                     Mat scale_data(group);
-        //                     for (int g = 0; g < group; g++)
-        //                     {
-        //                         // dequantize
-        //                         float scale_in;
-        //                         if (weight_data_int8_scales[g] == 0)
-        //                             scale_in = 0;
-        //                         else
-        //                             scale_in = 1.f / (bottom_blob_int8_scales[g] * weight_data_int8_scales[g]);
-
-        //                         scale_data[g] = scale_in;
-        //                     }
-
-        //                     dequantize_from_int32(top_blob_int32, top_blob, scale_data, bias_data, opt);
-        //                 }
-
-        //                 if (activation)
-        //                 {
-        //                     activation->forward_inplace(top_blob, opt);
-        //                 }
-        //             }
-        //             else
-        // #endif // NCNN_GNU_INLINE_ASM
-        //             {
-        //                 const int maxk = kernel_w * kernel_h;
-
-        //                 // kernel offsets
-        //                 std::vector<int> _space_ofs(maxk);
-        //                 int* space_ofs = &_space_ofs[0];
-        //                 {
-        //                     int p1 = 0;
-        //                     int p2 = 0;
-        //                     int gap = w * dilation_h - kernel_w * dilation_w;
-        //                     for (int i = 0; i < kernel_h; i++)
-        //                     {
-        //                         for (int j = 0; j < kernel_w; j++)
-        //                         {
-        //                             space_ofs[p1] = p2;
-        //                             p1++;
-        //                             p2 += dilation_w;
-        //                         }
-        //                         p2 += gap;
-        //                     }
-        //                 }
-
-        //                 #pragma omp parallel for num_threads(opt.num_threads)
-        //                 for (int g = 0; g < group; g++)
-        //                 {
-        //                     signed char* outptr_s8 = top_blob.channel(g);
-        //                     float* outptr_f32 = top_blob.channel(g);
-        //                     const signed char* kptr = (const signed char*)weight_data_tm + maxk * g;
-        //                     const Mat m = bottom_blob_bordered.channel(g);
-
-        //                     for (int i = 0; i < outh; i++)
-        //                     {
-        //                         for (int j = 0; j < outw; j++)
-        //                         {
-        //                             int sum = 0;
-
-        //                             const signed char* sptr = m.row<const signed char>(i * stride_h) + j * stride_w;
-
-        //                             for (int k = 0; k < maxk; k++)
-        //                             {
-        //                                 signed char val = sptr[space_ofs[k]];
-        //                                 signed char w = kptr[k];
-        //                                 sum += val * w;
-        //                             }
-
-        //                             float scale_in;
-        //                             if (weight_data_int8_scales[g] == 0)
-        //                                 scale_in = 0;
-        //                             else
-        //                                 scale_in = 1.f / (bottom_blob_int8_scales[g] * weight_data_int8_scales[g]);
-
-        //                             float sumfp32 = sum * scale_in;
-
-        //                             if (bias_term)
-        //                                 sumfp32 += bias_data[g];
-
-        //                             sumfp32 = activation_ss(sumfp32, activation_type, activation_params);
-
-        //                             if (use_int8_requantize)
-        //                             {
-        //                                 // requantize
-        //                                 float scale_out = top_blob_int8_scales[g];
-        //                                 signed char sums8 = float2int8(sumfp32 * scale_out);
-        //                                 outptr_s8[0] = sums8;
-        //                                 outptr_s8 += 1;
-        //                             }
-        //                             else
-        //                             {
-        //                                 // dequantize
-        //                                 outptr_f32[0] = sumfp32;
-        //                                 outptr_f32 += 1;
-        //                             }
-        //                         }
-        //                     }
-        //                 }
-        //             }
-        //         }
+                            if (use_int8_requantize)
+                            {
+                                // requantize
+                                float scale_out = top_blob_int8_scales[g];
+                                signed char sums8 = float2int8(sumfp32 * scale_out);
+                                outptr_s8[0] = sums8;
+                                outptr_s8 += 1;
+                            }
+                            else
+                            {
+                                // dequantize
+                                outptr_f32[0] = sumfp32;
+                                outptr_f32 += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         return 0;
     }
@@ -1668,8 +1564,8 @@ int ConvolutionDepthWise_riscv::forward_int8(const Mat& bottom_blob, Mat& top_bl
         out_elemsize = use_int8_requantize ? 1u * out_elempack : 2u * out_elempack;
     }
     // #endif
-    // if (opt.use_bf16_storage)
-    //     out_elemsize = use_int8_requantize ? 1u * out_elempack : 2u * out_elempack;
+    if (opt.use_bf16_storage)
+        out_elemsize = use_int8_requantize ? 1u * out_elempack : 2u * out_elempack;
 
     top_blob.create(outw, outh, num_output / out_elempack, out_elemsize, out_elempack, opt.blob_allocator);
     if (top_blob.empty())
@@ -1678,6 +1574,10 @@ int ConvolutionDepthWise_riscv::forward_int8(const Mat& bottom_blob, Mat& top_bl
     // group convolution
     const int channels_g = channels * elempack / group;
     const int num_output_g = num_output / group;
+
+    fprintf(stderr, "group = %d, num_output = %d\n", group, num_output);
+
+    fprintf(stderr, "channels_g = %d, num_output_g = %d\n", channels_g, num_output_g);
 
     int g_elempack = 1;
     int out_g_elempack = 1;
@@ -1709,7 +1609,7 @@ int ConvolutionDepthWise_riscv::forward_int8(const Mat& bottom_blob, Mat& top_bl
             return -100;
     }
 
-    #pragma omp parallel for num_threads(opt.num_threads)
+#pragma omp parallel for num_threads(opt.num_threads)
     for (int g = 0; g < group; g++)
     {
         const Mat bottom_blob_bordered_g = bottom_blob_bordered_unpacked.channel_range(channels_g * g / g_elempack, channels_g / g_elempack);

@@ -1269,6 +1269,7 @@ int ConvolutionDepthWise_riscv::forward_int8(const Mat& bottom_blob, Mat& top_bl
 #if __riscv_vector
         if (elempack == 8)
         {
+            /*
             if (kernel_w == 3 && kernel_h == 3 && dilation_w == 1 && dilation_h == 1 && stride_w == 1 && stride_h == 1 && (activation_type == 0 || activation_type == 1))
             {
                 Mat top_blob_int32;
@@ -1326,6 +1327,7 @@ int ConvolutionDepthWise_riscv::forward_int8(const Mat& bottom_blob, Mat& top_bl
 
                     scale_in_data[g] = scale_in;
                 }
+                fprintf(stderr, "use_int8_requantize = %d\n", use_int8_requantize);
 
                 if (use_int8_requantize)
                 {
@@ -1342,6 +1344,7 @@ int ConvolutionDepthWise_riscv::forward_int8(const Mat& bottom_blob, Mat& top_bl
                 }
             }
             else
+            */
             {
                 const int maxk = kernel_w * kernel_h;
 

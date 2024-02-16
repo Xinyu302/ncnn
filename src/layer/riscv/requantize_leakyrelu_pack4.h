@@ -36,7 +36,7 @@ static void requantize_leakyrelu_pack4_rvv(const Mat& bottom_blob, Mat& top_blob
     {
         if (bias_data_size == 0)
         {
-#pragma omp parallel for num_threads(opt.num_threads)
+            #pragma omp parallel for num_threads(opt.num_threads)
             for (int q = 0; q < outc; q++)
             {
                 const int* intptr0 = bottom_blob.channel(q * 2);
@@ -76,7 +76,6 @@ static void requantize_leakyrelu_pack4_rvv(const Mat& bottom_blob, Mat& top_blob
                     *(int64_t*)(ptr + 16) = float2int8leakyrelu(_v02, _v12, _slope);
                     *(int64_t*)(ptr + 24) = float2int8leakyrelu(_v03, _v13, _slope);
 
-
                     intptr0 += 16;
                     intptr1 += 16;
                     ptr += 32;
@@ -97,7 +96,7 @@ static void requantize_leakyrelu_pack4_rvv(const Mat& bottom_blob, Mat& top_blob
         }
         else
         {
-#pragma omp parallel for num_threads(opt.num_threads)
+            #pragma omp parallel for num_threads(opt.num_threads)
             for (int q = 0; q < outc; q++)
             {
                 const int* intptr0 = bottom_blob.channel(q * 2);
@@ -187,7 +186,7 @@ static void requantize_leakyrelu_pack4_rvv(const Mat& bottom_blob, Mat& top_blob
     {
         if (bias_data_size == 0)
         {
-#pragma omp parallel for num_threads(opt.num_threads)
+            #pragma omp parallel for num_threads(opt.num_threads)
             for (int q = 0; q < channels; q++)
             {
                 const int* intptr = bottom_blob.channel(q);
@@ -224,7 +223,7 @@ static void requantize_leakyrelu_pack4_rvv(const Mat& bottom_blob, Mat& top_blob
         }
         else
         {
-#pragma omp parallel for num_threads(opt.num_threads)
+            #pragma omp parallel for num_threads(opt.num_threads)
             for (int q = 0; q < channels; q++)
             {
                 const int* intptr = bottom_blob.channel(q);

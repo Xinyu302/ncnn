@@ -56,10 +56,10 @@ static void requantize_relu_pack8_rvv(const Mat& bottom_blob, Mat& top_blob, con
                 _v45 = vfmul_vv_f32m2(_v45, _scale0, vl);
                 _v67 = vfmul_vv_f32m2(_v67, _scale0, vl);
 
-                *(int64_t *)ptr = float2int8relu(_v01);
-                *(int64_t *)(ptr + 8) = float2int8relu(_v23);
-                *(int64_t *)(ptr + 16) = float2int8relu(_v45);
-                *(int64_t *)(ptr + 24) = float2int8relu(_v67);
+                *(int64_t*)ptr = float2int8relu(_v01);
+                *(int64_t*)(ptr + 8) = float2int8relu(_v23);
+                *(int64_t*)(ptr + 16) = float2int8relu(_v45);
+                *(int64_t*)(ptr + 24) = float2int8relu(_v67);
 
                 intptr += 32;
                 ptr += 32;
@@ -72,8 +72,8 @@ static void requantize_relu_pack8_rvv(const Mat& bottom_blob, Mat& top_blob, con
                 _v01 = vfmul_vv_f32m2(_v01, _scale0, vl);
                 _v23 = vfmul_vv_f32m2(_v23, _scale0, vl);
 
-                *(int64_t *)ptr = float2int8relu(_v01);
-                *(int64_t *)(ptr + 8) = float2int8relu(_v23);
+                *(int64_t*)ptr = float2int8relu(_v01);
+                *(int64_t*)(ptr + 8) = float2int8relu(_v23);
                 intptr += 16;
                 ptr += 16;
             }
@@ -83,7 +83,7 @@ static void requantize_relu_pack8_rvv(const Mat& bottom_blob, Mat& top_blob, con
 
                 _v01 = vfmul_vv_f32m2(_v01, _scale0, vl);
 
-                *(int64_t *)ptr = float2int8relu(_v01);
+                *(int64_t*)ptr = float2int8relu(_v01);
 
                 intptr += 8;
                 ptr += 8;
@@ -117,10 +117,10 @@ static void requantize_relu_pack8_rvv(const Mat& bottom_blob, Mat& top_blob, con
                 _v45 = vfmacc_vv_f32m2(_bias0, _v45, _scale0, vl);
                 _v67 = vfmacc_vv_f32m2(_bias0, _v67, _scale0, vl);
 
-                *(int64_t *)ptr = float2int8relu(_v01);
-                *(int64_t *)(ptr + 8) = float2int8relu(_v23);
-                *(int64_t *)(ptr + 16) = float2int8relu(_v45);
-                *(int64_t *)(ptr + 24) = float2int8relu(_v67);
+                *(int64_t*)ptr = float2int8relu(_v01);
+                *(int64_t*)(ptr + 8) = float2int8relu(_v23);
+                *(int64_t*)(ptr + 16) = float2int8relu(_v45);
+                *(int64_t*)(ptr + 24) = float2int8relu(_v67);
 
                 intptr += 32;
                 ptr += 32;
@@ -133,8 +133,8 @@ static void requantize_relu_pack8_rvv(const Mat& bottom_blob, Mat& top_blob, con
                 _v01 = vfmacc_vv_f32m2(_bias0, _v01, _scale0, vl);
                 _v23 = vfmacc_vv_f32m2(_bias0, _v23, _scale0, vl);
 
-                *(int64_t *)ptr = float2int8relu(_v01);
-                *(int64_t *)(ptr + 8) = float2int8relu(_v23);
+                *(int64_t*)ptr = float2int8relu(_v01);
+                *(int64_t*)(ptr + 8) = float2int8relu(_v23);
 
                 intptr += 16;
                 ptr += 16;
@@ -145,7 +145,7 @@ static void requantize_relu_pack8_rvv(const Mat& bottom_blob, Mat& top_blob, con
 
                 _v01 = vfmacc_vv_f32m2(_bias0, _v01, _scale0, vl);
 
-                *(int64_t *)ptr = float2int8relu(_v01);
+                *(int64_t*)ptr = float2int8relu(_v01);
 
                 intptr += 8;
                 ptr += 8;

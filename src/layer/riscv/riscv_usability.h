@@ -138,7 +138,6 @@ static inline int64_t float2int8relu(vfloat32m2_t _v)
     return _ret;
 }
 
-
 static inline int64_t float2int8leakyrelu(vfloat32m2_t _v, vfloat32m2_t _slope)
 {
     int vl = vsetvlmax_e32m2();

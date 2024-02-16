@@ -40,10 +40,10 @@ static void requantize_leakyrelu_pack8_rvv(const Mat& bottom_blob, Mat& top_blob
 
             vfloat32m2_t _scale_in0 = scale_in_data_size == 1 ? vfmv_v_f_f32m2(scale_in_data[0], vl) : vle32_v_f32m2((const float*)scale_in_data + q * 8, vl);
             vfloat32m2_t _scale_out0 = scale_out_data_size == 1 ? vfmv_v_f_f32m2(scale_out_data[0], vl) : vle32_v_f32m2((const float*)scale_out_data + q * 8, vl);
-            
+
             vfloat32m2_t _scale0 = vfmul_vv_f32m2(_scale_in0, _scale_out0, vl);
             vfloat32m2_t _slope = vfmv_v_f_f32m2(slope, vl);
-            
+
             int i = 0;
             for (; i + 3 < size; i += 4)
             {
@@ -57,11 +57,11 @@ static void requantize_leakyrelu_pack8_rvv(const Mat& bottom_blob, Mat& top_blob
                 _v45 = vfmul_vv_f32m2(_v45, _scale0, vl);
                 _v67 = vfmul_vv_f32m2(_v67, _scale0, vl);
 
-                *(int64_t *)ptr = float2int8leakyrelu(_v01, _slope);
-                *(int64_t *)(ptr + 8) = float2int8leakyrelu(_v23, _slope);
-                *(int64_t *)(ptr + 16) = float2int8leakyrelu(_v45, _slope);
-                *(int64_t *)(ptr + 24) = float2int8leakyrelu(_v67, _slope);
-                
+                *(int64_t*)ptr = float2int8leakyrelu(_v01, _slope);
+                *(int64_t*)(ptr + 8) = float2int8leakyrelu(_v23, _slope);
+                *(int64_t*)(ptr + 16) = float2int8leakyrelu(_v45, _slope);
+                *(int64_t*)(ptr + 24) = float2int8leakyrelu(_v67, _slope);
+
                 intptr += 32;
                 ptr += 32;
             }
@@ -73,8 +73,8 @@ static void requantize_leakyrelu_pack8_rvv(const Mat& bottom_blob, Mat& top_blob
                 _v01 = vfmul_vv_f32m2(_v01, _scale0, vl);
                 _v23 = vfmul_vv_f32m2(_v23, _scale0, vl);
 
-                *(int64_t *)ptr = float2int8leakyrelu(_v01, _slope);
-                *(int64_t *)(ptr + 8) = float2int8leakyrelu(_v23, _slope);
+                *(int64_t*)ptr = float2int8leakyrelu(_v01, _slope);
+                *(int64_t*)(ptr + 8) = float2int8leakyrelu(_v23, _slope);
 
                 intptr += 16;
                 ptr += 16;
@@ -85,7 +85,7 @@ static void requantize_leakyrelu_pack8_rvv(const Mat& bottom_blob, Mat& top_blob
 
                 _v01 = vfmul_vv_f32m2(_v01, _scale0, vl);
 
-                *(int64_t *)ptr = float2int8leakyrelu(_v01, _slope);
+                *(int64_t*)ptr = float2int8leakyrelu(_v01, _slope);
 
                 intptr += 8;
                 ptr += 8;
@@ -122,10 +122,10 @@ static void requantize_leakyrelu_pack8_rvv(const Mat& bottom_blob, Mat& top_blob
                 _v45 = vfmacc_vv_f32m2(_bias0, _v45, _scale0, vl);
                 _v67 = vfmacc_vv_f32m2(_bias0, _v67, _scale0, vl);
 
-                *(int64_t *)ptr = float2int8leakyrelu(_v01, _slope);
-                *(int64_t *)(ptr + 8) = float2int8leakyrelu(_v23, _slope);
-                *(int64_t *)(ptr + 16) = float2int8leakyrelu(_v45, _slope);
-                *(int64_t *)(ptr + 24) = float2int8leakyrelu(_v67, _slope);
+                *(int64_t*)ptr = float2int8leakyrelu(_v01, _slope);
+                *(int64_t*)(ptr + 8) = float2int8leakyrelu(_v23, _slope);
+                *(int64_t*)(ptr + 16) = float2int8leakyrelu(_v45, _slope);
+                *(int64_t*)(ptr + 24) = float2int8leakyrelu(_v67, _slope);
 
                 intptr += 32;
                 ptr += 32;
@@ -138,8 +138,8 @@ static void requantize_leakyrelu_pack8_rvv(const Mat& bottom_blob, Mat& top_blob
                 _v01 = vfmacc_vv_f32m2(_bias0, _v01, _scale0, vl);
                 _v23 = vfmacc_vv_f32m2(_bias0, _v23, _scale0, vl);
 
-                *(int64_t *)ptr = float2int8leakyrelu(_v01, _slope);
-                *(int64_t *)(ptr + 8) = float2int8leakyrelu(_v23, _slope);
+                *(int64_t*)ptr = float2int8leakyrelu(_v01, _slope);
+                *(int64_t*)(ptr + 8) = float2int8leakyrelu(_v23, _slope);
 
                 intptr += 16;
                 ptr += 16;
@@ -150,7 +150,7 @@ static void requantize_leakyrelu_pack8_rvv(const Mat& bottom_blob, Mat& top_blob
 
                 _v01 = vfmacc_vv_f32m2(_bias0, _v01, _scale0, vl);
 
-                *(int64_t *)ptr = float2int8leakyrelu(_v01, _slope);
+                *(int64_t*)ptr = float2int8leakyrelu(_v01, _slope);
 
                 intptr += 8;
                 ptr += 8;

@@ -36,7 +36,7 @@ static void requantize_relu_pack4_rvv(const Mat& bottom_blob, Mat& top_blob, con
     {
         if (bias_data_size == 0)
         {
-#pragma omp parallel for num_threads(opt.num_threads)
+            #pragma omp parallel for num_threads(opt.num_threads)
             for (int q = 0; q < outc; q++)
             {
                 const int* intptr0 = bottom_blob.channel(q * 2);
@@ -95,7 +95,7 @@ static void requantize_relu_pack4_rvv(const Mat& bottom_blob, Mat& top_blob, con
         }
         else
         {
-#pragma omp parallel for num_threads(opt.num_threads)
+            #pragma omp parallel for num_threads(opt.num_threads)
             for (int q = 0; q < outc; q++)
             {
                 const int* intptr0 = bottom_blob.channel(q * 2);
@@ -184,7 +184,7 @@ static void requantize_relu_pack4_rvv(const Mat& bottom_blob, Mat& top_blob, con
     {
         if (bias_data_size == 0)
         {
-#pragma omp parallel for num_threads(opt.num_threads)
+            #pragma omp parallel for num_threads(opt.num_threads)
             for (int q = 0; q < channels; q++)
             {
                 const int* intptr = bottom_blob.channel(q);
@@ -220,7 +220,7 @@ static void requantize_relu_pack4_rvv(const Mat& bottom_blob, Mat& top_blob, con
         }
         else
         {
-#pragma omp parallel for num_threads(opt.num_threads)
+            #pragma omp parallel for num_threads(opt.num_threads)
             for (int q = 0; q < channels; q++)
             {
                 const int* intptr = bottom_blob.channel(q);

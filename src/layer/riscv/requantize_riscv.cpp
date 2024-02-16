@@ -74,7 +74,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = vfmul_vv_f32m2(_v0, _scale_in, vl);
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out, vl);
-                        *(int64_t *)ptr = float2int8(_v0);
+                        *(int64_t*)ptr = float2int8(_v0);
                     }
                 }
                 else if (bias_data_size == 1)
@@ -90,7 +90,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = vfmacc_vv_f32m2(_bias, _v0, _scale_in, vl);
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out, vl);
-                        *(int64_t *)ptr = float2int8(_v0);
+                        *(int64_t*)ptr = float2int8(_v0);
                     }
                 }
                 else
@@ -106,7 +106,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = vfmacc_vv_f32m2(_bias0, _v0, _scale_in, vl);
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out, vl);
-                        *(int64_t *)ptr = float2int8(_v0);
+                        *(int64_t*)ptr = float2int8(_v0);
                     }
                 }
             }
@@ -127,7 +127,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = vfmul_vv_f32m2(_v0, _scale_in, vl);
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out0, vl);
-                        *(int64_t *)ptr = float2int8(_v0);
+                        *(int64_t*)ptr = float2int8(_v0);
                     }
                 }
                 else if (bias_data_size == 1)
@@ -145,7 +145,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = vfmacc_vv_f32m2(_bias, _v0, _scale_in, vl);
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out0, vl);
-                        *(int64_t *)ptr = float2int8(_v0);
+                        *(int64_t*)ptr = float2int8(_v0);
                     }
                 }
                 else
@@ -162,7 +162,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = vfmacc_vv_f32m2(_bias0, _v0, _scale_in, vl);
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out0, vl);
-                        *(int64_t *)ptr = float2int8(_v0);
+                        *(int64_t*)ptr = float2int8(_v0);
                     }
                 }
             }
@@ -183,7 +183,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = vfmul_vv_f32m2(_v0, _scale_in0, vl);
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out, vl);
-                        *(int64_t *)ptr = float2int8(_v0);
+                        *(int64_t*)ptr = float2int8(_v0);
                     }
                 }
                 else if (bias_data_size == 1)
@@ -201,7 +201,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = vfmacc_vv_f32m2(_bias, _v0, _scale_in0, vl);
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out, vl);
-                        *(int64_t *)ptr = float2int8(_v0);
+                        *(int64_t*)ptr = float2int8(_v0);
                     }
                 }
                 else
@@ -218,7 +218,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = vfmacc_vv_f32m2(_bias0, _v0, _scale_in0, vl);
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out, vl);
-                        *(int64_t *)ptr = float2int8(_v0);
+                        *(int64_t*)ptr = float2int8(_v0);
                     }
                 }
             }
@@ -238,7 +238,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = vfmul_vv_f32m2(_v0, _scale_in0, vl);
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out0, vl);
-                        *(int64_t *)ptr = float2int8(_v0);
+                        *(int64_t*)ptr = float2int8(_v0);
                     }
                 }
                 else if (bias_data_size == 1)
@@ -257,7 +257,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = vfmacc_vv_f32m2(_bias, _v0, _scale_in0, vl);
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out0, vl);
-                        *(int64_t *)ptr = float2int8(_v0);
+                        *(int64_t*)ptr = float2int8(_v0);
                     }
                 }
                 else
@@ -275,7 +275,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = vfmacc_vv_f32m2(_bias0, _v0, _scale_in0, vl);
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out0, vl);
-                        *(int64_t *)ptr = float2int8(_v0);
+                        *(int64_t*)ptr = float2int8(_v0);
                     }
                 }
             }
@@ -307,7 +307,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = vfmul_vv_f32m2(_v0, _scale_in0, vl);
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out0, vl);
-                        *(int64_t *)ptr = float2int8(_v0);
+                        *(int64_t*)ptr = float2int8(_v0);
 
                         intptr += 8;
                         ptr += 8;
@@ -332,7 +332,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = vfmacc_vv_f32m2(_bias0, _v0, _scale_in0, vl);
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out0, vl);
-                        *(int64_t *)ptr = float2int8(_v0);
+                        *(int64_t*)ptr = float2int8(_v0);
 
                         intptr += 8;
                         ptr += 8;
@@ -381,7 +381,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = vfmul_vv_f32m2(_v0, _scale_in0, vl);
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out0, vl);
-                        *(int64_t *)ptr = float2int8(_v0);
+                        *(int64_t*)ptr = float2int8(_v0);
 
                         intptr += 8;
                         ptr += 8;
@@ -406,7 +406,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = vfmacc_vv_f32m2(_bias0, _v0, _scale_in0, vl);
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out0, vl);
-                        *(int64_t *)ptr = float2int8(_v0);
+                        *(int64_t*)ptr = float2int8(_v0);
 
                         intptr += 8;
                         ptr += 8;
@@ -448,7 +448,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v = vfmul_vv_f32m1(_v, _scale_in, vl);
                         _v = activation_ps(_v, activation_type, activation_params, vl);
                         _v = vfmul_vv_f32m1(_v, _scale_out, vl);
-                        *(int32_t *)ptr = float2int8(_v);
+                        *(int32_t*)ptr = float2int8(_v);
                     }
                 }
                 else if (bias_data_size == 1)
@@ -465,7 +465,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v = vfmacc_vv_f32m1(_bias, _v, _scale_in, vl);
                         _v = activation_ps(_v, activation_type, activation_params, vl);
                         _v = vfmul_vv_f32m1(_v, _scale_out, vl);
-                        *(int32_t *)ptr = float2int8(_v);
+                        *(int32_t*)ptr = float2int8(_v);
                     }
                 }
                 else
@@ -481,7 +481,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v = vfmacc_vv_f32m1(_bias, _v, _scale_in, vl);
                         _v = activation_ps(_v, activation_type, activation_params, vl);
                         _v = vfmul_vv_f32m1(_v, _scale_out, vl);
-                        *(int32_t *)ptr = float2int8(_v);
+                        *(int32_t*)ptr = float2int8(_v);
                     }
                 }
             }
@@ -503,7 +503,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v = vfmul_vv_f32m1(_v, _scale_in, vl);
                         _v = activation_ps(_v, activation_type, activation_params, vl);
                         _v = vfmul_vv_f32m1(_v, _scale_out, vl);
-                        *(int32_t *)ptr = float2int8(_v);
+                        *(int32_t*)ptr = float2int8(_v);
                     }
                 }
                 else if (bias_data_size == 1)
@@ -521,7 +521,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v = vfmacc_vv_f32m1(_bias, _v, _scale_in, vl);
                         _v = activation_ps(_v, activation_type, activation_params, vl);
                         _v = vfmul_vv_f32m1(_v, _scale_out, vl);
-                        *(int32_t *)ptr = float2int8(_v);
+                        *(int32_t*)ptr = float2int8(_v);
                     }
                 }
                 else
@@ -538,7 +538,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v = vfmacc_vv_f32m1(_bias, _v, _scale_in, vl);
                         _v = activation_ps(_v, activation_type, activation_params, vl);
                         _v = vfmul_vv_f32m1(_v, _scale_out, vl);
-                        *(int32_t *)ptr = float2int8(_v);
+                        *(int32_t*)ptr = float2int8(_v);
                     }
                 }
             }
@@ -560,7 +560,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v = vfmul_vv_f32m1(_v, _scale_in, vl);
                         _v = activation_ps(_v, activation_type, activation_params, vl);
                         _v = vfmul_vv_f32m1(_v, _scale_out, vl);
-                        *(int32_t *)ptr = float2int8(_v);
+                        *(int32_t*)ptr = float2int8(_v);
                     }
                 }
                 else if (bias_data_size == 1)
@@ -579,7 +579,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v = vfmacc_vv_f32m1(_bias, _v, _scale_in, vl);
                         _v = activation_ps(_v, activation_type, activation_params, vl);
                         _v = vfmul_vv_f32m1(_v, _scale_out, vl);
-                        *(int32_t *)ptr = float2int8(_v);
+                        *(int32_t*)ptr = float2int8(_v);
                     }
                 }
                 else
@@ -596,7 +596,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v = vfmacc_vv_f32m1(_bias, _v, _scale_in, vl);
                         _v = activation_ps(_v, activation_type, activation_params, vl);
                         _v = vfmul_vv_f32m1(_v, _scale_out, vl);
-                        *(int32_t *)ptr = float2int8(_v);
+                        *(int32_t*)ptr = float2int8(_v);
                     }
                 }
             }
@@ -614,10 +614,10 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         vfloat32m1_t _scale_out = vle32_v_f32m1((const float*)scale_out_data + i * 4, vl);
 
                         vfloat32m1_t _v = vfcvt_f_x_v_f32m1(vle32_v_i32m1(intptr, vl), vl);
-                        _v = vfmul_vv_f32m1(_v, _scale_in, vl); 
+                        _v = vfmul_vv_f32m1(_v, _scale_in, vl);
                         _v = activation_ps(_v, activation_type, activation_params, vl);
                         _v = vfmul_vv_f32m1(_v, _scale_out, vl);
-                        *(int32_t *)ptr = float2int8(_v);
+                        *(int32_t*)ptr = float2int8(_v);
                     }
                 }
                 else if (bias_data_size == 1)
@@ -636,7 +636,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v = vfmacc_vv_f32m1(_bias, _v, _scale_in, vl);
                         _v = activation_ps(_v, activation_type, activation_params, vl);
                         _v = vfmul_vv_f32m1(_v, _scale_out, vl);
-                        *(int32_t *)ptr = float2int8(_v);
+                        *(int32_t*)ptr = float2int8(_v);
                     }
                 }
                 else
@@ -654,7 +654,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v = vfmacc_vv_f32m1(_bias, _v, _scale_in, vl);
                         _v = activation_ps(_v, activation_type, activation_params, vl);
                         _v = vfmul_vv_f32m1(_v, _scale_out, vl);
-                        *(int32_t *)ptr = float2int8(_v);
+                        *(int32_t*)ptr = float2int8(_v);
                     }
                 }
             }
@@ -687,7 +687,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         vfloat32m1_t _scale_out0 = scale_out_data_size == 1 ? vfmv_v_f_f32m1(scale_out_data[0], vl) : vle32_v_f32m1((const float*)scale_out_data + i * 8, vl);
                         vfloat32m1_t _scale_out1 = scale_out_data_size == 1 ? vfmv_v_f_f32m1(scale_out_data[0], vl) : vle32_v_f32m1((const float*)scale_out_data + i * 8 + 4, vl);
 
-
                         for (int j = 0; j < w; j++)
                         {
                             vfloat32m1_t _v0 = vfcvt_f_x_v_f32m1(vle32_v_i32m1(intptr0, vl), vl);
@@ -698,7 +697,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                             _v1 = activation_ps(_v1, activation_type, activation_params, vl);
                             _v0 = vfmul_vv_f32m1(_v0, _scale_out0, vl);
                             _v1 = vfmul_vv_f32m1(_v1, _scale_out1, vl);
-                            *(int64_t *)ptr = float2int8(_v0, _v1);
+                            *(int64_t*)ptr = float2int8(_v0, _v1);
 
                             intptr0 += 4;
                             intptr1 += 4;
@@ -732,7 +731,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                             _v1 = activation_ps(_v1, activation_type, activation_params, vl);
                             _v0 = vfmul_vv_f32m1(_v0, _scale_out0, vl);
                             _v1 = vfmul_vv_f32m1(_v1, _scale_out1, vl);
-                            *(int64_t *)ptr = float2int8(_v0, _v1);
+                            *(int64_t*)ptr = float2int8(_v0, _v1);
 
                             intptr0 += 4;
                             intptr1 += 4;
@@ -764,10 +763,10 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                             _v = activation_ps(_v, activation_type, activation_params, vl);
                             _v = vfmul_vv_f32m1(_v, _scale_out, vl);
                             int res = float2int8(_v);
-                            ptr0[0] = (res) & 0xff;      
+                            ptr0[0] = (res)&0xff;
                             ptr1[0] = (res >> 8) & 0xff;
                             ptr2[0] = (res >> 16) & 0xff;
-                            ptr3[0] = (res >> 24) & 0xff;      
+                            ptr3[0] = (res >> 24) & 0xff;
 
                             intptr += 4;
                             ptr0 += 1;
@@ -800,10 +799,10 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                             _v = vfmul_vv_f32m1(_v, _scale_out, vl);
                             int res = float2int8(_v);
 
-                            ptr0[0] = (res) & 0xff;      
+                            ptr0[0] = (res)&0xff;
                             ptr1[0] = (res >> 8) & 0xff;
                             ptr2[0] = (res >> 16) & 0xff;
-                            ptr3[0] = (res >> 24) & 0xff;                           
+                            ptr3[0] = (res >> 24) & 0xff;
 
                             intptr += 4;
                             ptr0 += 1;
@@ -867,7 +866,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                             _v1 = activation_ps(_v1, activation_type, activation_params, vl);
                             _v0 = vfmul_vv_f32m1(_v0, _scale_out0, vl);
                             _v1 = vfmul_vv_f32m1(_v1, _scale_out1, vl);
-                            *(int64_t *)ptr = float2int8(_v0, _v1);
+                            *(int64_t*)ptr = float2int8(_v0, _v1);
 
                             intptr0 += 4;
                             intptr1 += 4;
@@ -900,7 +899,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                             _v1 = activation_ps(_v1, activation_type, activation_params, vl);
                             _v0 = vfmul_vv_f32m1(_v0, _scale_out0, vl);
                             _v1 = vfmul_vv_f32m1(_v1, _scale_out1, vl);
-                            *(int64_t *)ptr = float2int8(_v0, _v1);
+                            *(int64_t*)ptr = float2int8(_v0, _v1);
 
                             intptr0 += 4;
                             intptr1 += 4;
@@ -934,7 +933,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                             _v = activation_ps(_v, activation_type, activation_params, vl);
                             _v = vfmul_vv_f32m1(_v, _scale_out, vl);
                             int res = float2int8(_v);
-                            ptr0[0] = (res) & 0xff;
+                            ptr0[0] = (res)&0xff;
                             ptr1[0] = (res >> 8) & 0xff;
                             ptr2[0] = (res >> 16) & 0xff;
                             ptr3[0] = (res >> 24) & 0xff;
@@ -969,7 +968,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                             _v = activation_ps(_v, activation_type, activation_params, vl);
                             _v = vfmul_vv_f32m1(_v, _scale_out, vl);
                             int res = float2int8(_v);
-                            ptr0[0] = (res) & 0xff;
+                            ptr0[0] = (res)&0xff;
                             ptr1[0] = (res >> 8) & 0xff;
                             ptr2[0] = (res >> 16) & 0xff;
                             ptr3[0] = (res >> 24) & 0xff;

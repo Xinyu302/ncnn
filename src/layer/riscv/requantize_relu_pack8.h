@@ -38,8 +38,8 @@ static void requantize_relu_pack8_rvv(const Mat& bottom_blob, Mat& top_blob, con
             const int* intptr = bottom_blob.channel(q);
             signed char* ptr = top_blob.channel(q);
 
-            vfloat32m2_t _scale_in0 = vfmv_v_f_f32m2(scale_in_data_size == 1 ? scale_in_data[0] : scale_in_data[q * 8], vl);
-            vfloat32m2_t _scale_out0 = vfmv_v_f_f32m2(scale_out_data_size == 1 ? scale_out_data[0] : scale_out_data[q * 8], vl);
+            vfloat32m2_t _scale_in0 = scale_in_data_size == 1 ? vfmv_v_f_f32m2(scale_in_data[0], vl) : vle32_v_f32m2((const float*)scale_in_data + q * 8, vl);
+            vfloat32m2_t _scale_out0 = scale_out_data_size == 1 ? vfmv_v_f_f32m2(scale_out_data[0], vl) : vle32_v_f32m2((const float*)scale_out_data + q * 8, vl);
 
             // float32x4_t _scale_in0 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + q * 8);
             // float32x4_t _scale_in1 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + q * 8 + 4);
@@ -142,9 +142,9 @@ static void requantize_relu_pack8_rvv(const Mat& bottom_blob, Mat& top_blob, con
             const int* intptr = bottom_blob.channel(q);
             signed char* ptr = top_blob.channel(q);
 
-            vfloat32m2_t _scale_in0 = scale_in_data_size == 1 ? vfmv_v_f_f32m2(scale_in_data[0], vl) : vle32_v_f32m2(scale_in_data, vl);
-            vfloat32m2_t _scale_out0 = scale_out_data_size == 1 ? vfmv_v_f_f32m2(scale_out_data[0], vl) : vle32_v_f32m2(scale_out_data, vl);
-            vfloat32m2_t _bias0 = bias_data_size == 1 ? vfmv_v_f_f32m2(bias_data[0], vl) : vle32_v_f32m2(bias_data, vl);
+            vfloat32m2_t _scale_in0 = scale_in_data_size == 1 ? vfmv_v_f_f32m2(scale_in_data[0], vl) : vle32_v_f32m2((const float*)scale_in_data + q * 8, vl);
+            vfloat32m2_t _scale_out0 = scale_out_data_size == 1 ? vfmv_v_f_f32m2(scale_out_data[0], vl) : vle32_v_f32m2((const float*)scale_out_data + q * 8, vl);
+            vfloat32m2_t _bias0 = bias_data_size == 1 ? vfmv_v_f_f32m2(bias_data[0], vl) : vle32_v_f32m2((const float*)bias_data + q * 8, vl);
 
             vfloat32m2_t _scale0 = vfmul_vv_f32m2(_scale_in0, _scale_out0, vl);
             _bias0 = vfmul_vv_f32m2(_bias0, _scale_out0, vl);

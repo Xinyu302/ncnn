@@ -36,7 +36,7 @@ static void requantize_leakyrelu_pack4_rvv(const Mat& bottom_blob, Mat& top_blob
     {
         if (bias_data_size == 0)
         {
-            #pragma omp parallel for num_threads(opt.num_threads)
+#pragma omp parallel for num_threads(opt.num_threads)
             for (int q = 0; q < outc; q++)
             {
                 const int* intptr0 = bottom_blob.channel(q * 2);
@@ -130,7 +130,7 @@ static void requantize_leakyrelu_pack4_rvv(const Mat& bottom_blob, Mat& top_blob
         }
         else
         {
-            #pragma omp parallel for num_threads(opt.num_threads)
+#pragma omp parallel for num_threads(opt.num_threads)
             for (int q = 0; q < outc; q++)
             {
                 const int* intptr0 = bottom_blob.channel(q * 2);
@@ -272,7 +272,7 @@ static void requantize_leakyrelu_pack4_rvv(const Mat& bottom_blob, Mat& top_blob
     {
         if (bias_data_size == 0)
         {
-            #pragma omp parallel for num_threads(opt.num_threads)
+#pragma omp parallel for num_threads(opt.num_threads)
             for (int q = 0; q < channels; q++)
             {
                 const int* intptr = bottom_blob.channel(q);
@@ -298,10 +298,10 @@ static void requantize_leakyrelu_pack4_rvv(const Mat& bottom_blob, Mat& top_blob
                     // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
                     // _v = vmulq_f32(_v, _scale);
                     int res = float2int8leakyrelu(_v, _slope);
-                    ptr0[0] = (res >> 24) & 0xff;
-                    ptr1[0] = (res >> 16) & 0xff;
-                    ptr2[0] = (res >> 8) & 0xff;
-                    ptr3[0] = res & 0xff;
+                    ptr0[0] = (res)&0xff;
+                    ptr1[0] = (res >> 8) & 0xff;
+                    ptr2[0] = (res >> 16) & 0xff;
+                    ptr3[0] = (res >> 24) & 0xff;
                     // int8x8_t v = float2int8leakyrelu(_v, _v, _slope);
                     // ptr0[0] = vget_lane_s8(v, 0);
                     // ptr1[0] = vget_lane_s8(v, 1);
@@ -318,7 +318,7 @@ static void requantize_leakyrelu_pack4_rvv(const Mat& bottom_blob, Mat& top_blob
         }
         else
         {
-            #pragma omp parallel for num_threads(opt.num_threads)
+#pragma omp parallel for num_threads(opt.num_threads)
             for (int q = 0; q < channels; q++)
             {
                 const int* intptr = bottom_blob.channel(q);
@@ -347,10 +347,10 @@ static void requantize_leakyrelu_pack4_rvv(const Mat& bottom_blob, Mat& top_blob
                     vfloat32m1_t _v = vfcvt_f_x_v_f32m1(vle32_v_i32m1(intptr, vl), vl);
                     _v = vfmacc_vv_f32m1(_bias, _v, _scale, vl);
                     int res = float2int8leakyrelu(_v, _slope);
-                    ptr0[0] = (res >> 24) & 0xff;
-                    ptr1[0] = (res >> 16) & 0xff;
-                    ptr2[0] = (res >> 8) & 0xff;
-                    ptr3[0] = res & 0xff;
+                    ptr0[0] = (res)&0xff;
+                    ptr1[0] = (res >> 8) & 0xff;
+                    ptr2[0] = (res >> 16) & 0xff;
+                    ptr3[0] = (res >> 24) & 0xff;
                     // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
                     // _v = vfmaq_f32(_bias, _v, _scale);
                     // int8x8_t v = float2int8leakyrelu(_v, _v, _slope);

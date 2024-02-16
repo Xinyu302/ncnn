@@ -48,6 +48,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
 #if __riscv_vector
     if (elempack == 8)
     {
+        fprintf(stderr, "requantize elempack == 8\n");
         vl = 8;
         if (dims == 1)
         {
@@ -434,7 +435,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
 
         if (dims == 2)
         {
-            vl = 8;
             int w = bottom_blob.w;
             int h = bottom_blob.h;
 
@@ -714,7 +714,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v = vfmacc_vv_f32m1(_bias, _v, _scale_in, vl);
                         _v = activation_ps(_v, activation_type, activation_params, vl);
                         _v = vfmul_vv_f32m1(_v, _scale_out, vl);
-                        print_vfloat32m1(_v);
+                        // print_vfloat32m1(_v);
                         *(int32_t *)ptr = float2int8(_v);
                         // float32x4_t _bias = vld1q_f32((const float*)bias_data + i * 4);
                         // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
@@ -1140,10 +1140,10 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                             _v = activation_ps(_v, activation_type, activation_params, vl);
                             _v = vfmul_vv_f32m1(_v, _scale_out, vl);
                             int res = float2int8(_v);
-                            ptr0[0] = (res >> 24) & 0xff;      
-                            ptr1[0] = (res >> 16) & 0xff;
-                            ptr2[0] = (res >> 8) & 0xff;
-                            ptr3[0] = (res) & 0xff;      
+                            ptr0[0] = (res) & 0xff;      
+                            ptr1[0] = (res >> 8) & 0xff;
+                            ptr2[0] = (res >> 16) & 0xff;
+                            ptr3[0] = (res >> 24) & 0xff;      
                             // *(int32_t *)ptr0 = float2int8(_v);
                             // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
                             // _v = vmulq_f32(_v, _scale_in);
@@ -1189,10 +1189,10 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                             _v = vfmul_vv_f32m1(_v, _scale_out, vl);
                             int res = float2int8(_v);
 
-                            ptr0[0] = (res >> 24) & 0xff;      
-                            ptr1[0] = (res >> 16) & 0xff;
-                            ptr2[0] = (res >> 8) & 0xff;
-                            ptr3[0] = (res) & 0xff;                           
+                            ptr0[0] = (res) & 0xff;      
+                            ptr1[0] = (res >> 8) & 0xff;
+                            ptr2[0] = (res >> 16) & 0xff;
+                            ptr3[0] = (res >> 24) & 0xff;                           
                             // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
                             // _v = vmlaq_f32(_bias, _v, _scale_in);
                             // _v = activation_ps(_v, activation_type, activation_params);
@@ -1362,10 +1362,10 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                             _v = activation_ps(_v, activation_type, activation_params, vl);
                             _v = vfmul_vv_f32m1(_v, _scale_out, vl);
                             int res = float2int8(_v);
-                            ptr0[0] = (res >> 24) & 0xff;
-                            ptr1[0] = (res >> 16) & 0xff;
-                            ptr2[0] = (res >> 8) & 0xff;
-                            ptr3[0] = (res) & 0xff;
+                            ptr0[0] = (res) & 0xff;
+                            ptr1[0] = (res >> 8) & 0xff;
+                            ptr2[0] = (res >> 16) & 0xff;
+                            ptr3[0] = (res >> 24) & 0xff;
                             // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
                             // _v = vmulq_f32(_v, _scale_in);
                             // _v = activation_ps(_v, activation_type, activation_params);
@@ -1409,12 +1409,12 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                             _v = vfmacc_vv_f32m1(_bias, _v, _scale_in, vl);
                             _v = activation_ps(_v, activation_type, activation_params, vl);
                             _v = vfmul_vv_f32m1(_v, _scale_out, vl);
+                            // print_vfloat32m1(_v);
                             int res = float2int8(_v);
-                            ptr0[0] = (res >> 24) & 0xff;
-                            ptr1[0] = (res >> 16) & 0xff;
-                            ptr2[0] = (res >> 8) & 0xff;
-                            ptr3[0] = (res) & 0xff;
-
+                            ptr0[0] = (res) & 0xff;
+                            ptr1[0] = (res >> 8) & 0xff;
+                            ptr2[0] = (res >> 16) & 0xff;
+                            ptr3[0] = (res >> 24) & 0xff;
                             // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
                             // _v = vmlaq_f32(_bias, _v, _scale_in);
                             // _v = activation_ps(_v, activation_type, activation_params);

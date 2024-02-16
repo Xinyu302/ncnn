@@ -48,7 +48,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
 #if __riscv_vector
     if (elempack == 8)
     {
-        fprintf(stderr, "requantize elempack == 8\n");
         vl = 8;
         if (dims == 1)
         {
@@ -60,8 +59,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
 
             if (scale_in_data_size == 1 && scale_out_data_size == 1)
             {
-                // float32x4_t _scale_in = vdupq_n_f32(scale_in_data[0]);
-                // float32x4_t _scale_out = vdupq_n_f32(scale_out_data[0]);
                 vfloat32m2_t _scale_in = vfmv_v_f_f32m2(scale_in_data[0], vl);
                 vfloat32m2_t _scale_out = vfmv_v_f_f32m2(scale_out_data[0], vl);
 
@@ -74,24 +71,14 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         signed char* ptr = (signed char*)top_blob + i * 8;
 
                         vfloat32m2_t _v0 = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
-                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
                         _v0 = vfmul_vv_f32m2(_v0, _scale_in, vl);
-                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32((intptr + 4)));
-                        // _v0 = vmulq_f32(_v0, _scale_in);
-                        // _v1 = vmulq_f32(_v1, _scale_in);
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
-                        // _v0 = activation_ps(_v0, activation_type, activation_params);
-                        // _v1 = activation_ps(_v1, activation_type, activation_params);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out, vl);
-                        // _v0 = vmulq_f32(_v0, _scale_out);
-                        // _v1 = vmulq_f32(_v1, _scale_out);
                         *(int64_t *)ptr = float2int8(_v0);
-                        // vst1_s8(ptr, float2int8(_v0, _v1));
                     }
                 }
                 else if (bias_data_size == 1)
                 {
-                    // float32x4_t _bias = vdupq_n_f32(bias_data[0]);
                     vfloat32m2_t _bias = vfmv_v_f_f32m2(bias_data[0], vl);
 
                     #pragma omp parallel for num_threads(opt.num_threads)
@@ -104,15 +91,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out, vl);
                         *(int64_t *)ptr = float2int8(_v0);
-                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32((intptr + 4)));
-                        // _v0 = vmlaq_f32(_bias, _v0, _scale_in);
-                        // _v1 = vmlaq_f32(_bias, _v1, _scale_in);
-                        // _v0 = activation_ps(_v0, activation_type, activation_params);
-                        // _v1 = activation_ps(_v1, activation_type, activation_params);
-                        // _v0 = vmulq_f32(_v0, _scale_out);
-                        // _v1 = vmulq_f32(_v1, _scale_out);
-                        // vst1_s8(ptr, float2int8(_v0, _v1));
                     }
                 }
                 else
@@ -123,29 +101,17 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         const int* intptr = (const int*)bottom_blob + i * 8;
                         signed char* ptr = (signed char*)top_blob + i * 8;
 
-                        // float32x4_t _bias0 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + i * 8);
-                        // float32x4_t _bias1 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + i * 8 + 4);
                         vfloat32m2_t _bias0 = bias_data_size == 1 ? vfmv_v_f_f32m2(bias_data[0], vl) : vle32_v_f32m2((const float*)bias_data + i * 8, vl);
                         vfloat32m2_t _v0 = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
                         _v0 = vfmacc_vv_f32m2(_bias0, _v0, _scale_in, vl);
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out, vl);
                         *(int64_t *)ptr = float2int8(_v0);
-                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32((intptr + 4)));
-                        // _v0 = vmlaq_f32(_bias0, _v0, _scale_in);
-                        // _v1 = vmlaq_f32(_bias1, _v1, _scale_in);
-                        // _v0 = activation_ps(_v0, activation_type, activation_params);
-                        // _v1 = activation_ps(_v1, activation_type, activation_params);
-                        // _v0 = vmulq_f32(_v0, _scale_out);
-                        // _v1 = vmulq_f32(_v1, _scale_out);
-                        // vst1_s8(ptr, float2int8(_v0, _v1));
                     }
                 }
             }
             else if (scale_in_data_size == 1 && scale_out_data_size > 1)
             {
-                // float32x4_t _scale_in = vdupq_n_f32(scale_in_data[0]);
                 vfloat32m2_t _scale_in = vfmv_v_f_f32m2(scale_in_data[0], vl);
 
                 if (bias_data_size == 0)
@@ -162,23 +128,10 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out0, vl);
                         *(int64_t *)ptr = float2int8(_v0);
-
-                        // float32x4_t _scale_out0 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + i * 8);
-                        // float32x4_t _scale_out1 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + i * 8 + 4);
-                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32((intptr + 4)));
-                        // _v0 = vmulq_f32(_v0, _scale_in);
-                        // _v1 = vmulq_f32(_v1, _scale_in);
-                        // _v0 = activation_ps(_v0, activation_type, activation_params);
-                        // _v1 = activation_ps(_v1, activation_type, activation_params);
-                        // _v0 = vmulq_f32(_v0, _scale_out0);
-                        // _v1 = vmulq_f32(_v1, _scale_out1);
-                        // vst1_s8(ptr, float2int8(_v0, _v1));
                     }
                 }
                 else if (bias_data_size == 1)
                 {
-                    // float32x4_t _bias = vdupq_n_f32(bias_data[0]);
                     vfloat32m2_t _bias = vfmv_v_f_f32m2(bias_data[0], vl);
 
                     #pragma omp parallel for num_threads(opt.num_threads)
@@ -193,17 +146,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out0, vl);
                         *(int64_t *)ptr = float2int8(_v0);
-                        // float32x4_t _scale_out0 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + i * 8);
-                        // float32x4_t _scale_out1 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + i * 8 + 4);
-                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32((intptr + 4)));
-                        // _v0 = vmlaq_f32(_bias, _v0, _scale_in);
-                        // _v1 = vmlaq_f32(_bias, _v1, _scale_in);
-                        // _v0 = activation_ps(_v0, activation_type, activation_params);
-                        // _v1 = activation_ps(_v1, activation_type, activation_params);
-                        // _v0 = vmulq_f32(_v0, _scale_out0);
-                        // _v1 = vmulq_f32(_v1, _scale_out1);
-                        // vst1_s8(ptr, float2int8(_v0, _v1));
                     }
                 }
                 else
@@ -221,25 +163,11 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out0, vl);
                         *(int64_t *)ptr = float2int8(_v0);
-                        // float32x4_t _scale_out0 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + i * 8);
-                        // float32x4_t _scale_out1 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + i * 8 + 4);
-                        // float32x4_t _bias0 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + i * 8);
-                        // float32x4_t _bias1 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + i * 8 + 4);
-                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32((intptr + 4)));
-                        // _v0 = vmlaq_f32(_bias0, _v0, _scale_in);
-                        // _v1 = vmlaq_f32(_bias1, _v1, _scale_in);
-                        // _v0 = activation_ps(_v0, activation_type, activation_params);
-                        // _v1 = activation_ps(_v1, activation_type, activation_params);
-                        // _v0 = vmulq_f32(_v0, _scale_out0);
-                        // _v1 = vmulq_f32(_v1, _scale_out1);
-                        // vst1_s8(ptr, float2int8(_v0, _v1));
                     }
                 }
             }
             else if (scale_in_data_size > 1 && scale_out_data_size == 1)
             {
-                // float32x4_t _scale_out = vdupq_n_f32(scale_out_data[0]);
                 vfloat32m2_t _scale_out = vfmv_v_f_f32m2(scale_out_data[0], vl);
 
                 if (bias_data_size == 0)
@@ -256,22 +184,10 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out, vl);
                         *(int64_t *)ptr = float2int8(_v0);
-                        // float32x4_t _scale_in0 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + i * 8);
-                        // float32x4_t _scale_in1 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + i * 8 + 4);
-                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32((intptr + 4)));
-                        // _v0 = vmulq_f32(_v0, _scale_in0);
-                        // _v1 = vmulq_f32(_v1, _scale_in1);
-                        // _v0 = activation_ps(_v0, activation_type, activation_params);
-                        // _v1 = activation_ps(_v1, activation_type, activation_params);
-                        // _v0 = vmulq_f32(_v0, _scale_out);
-                        // _v1 = vmulq_f32(_v1, _scale_out);
-                        // vst1_s8(ptr, float2int8(_v0, _v1));
                     }
                 }
                 else if (bias_data_size == 1)
                 {
-                    // float32x4_t _bias = vdupq_n_f32(bias_data[0]);
                     vfloat32m2_t _bias = vfmv_v_f_f32m2(bias_data[0], vl);
 
                     #pragma omp parallel for num_threads(opt.num_threads)
@@ -286,17 +202,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out, vl);
                         *(int64_t *)ptr = float2int8(_v0);
-                        // float32x4_t _scale_in0 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + i * 8);
-                        // float32x4_t _scale_in1 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + i * 8 + 4);
-                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32((intptr + 4)));
-                        // _v0 = vmlaq_f32(_bias, _v0, _scale_in0);
-                        // _v1 = vmlaq_f32(_bias, _v1, _scale_in1);
-                        // _v0 = activation_ps(_v0, activation_type, activation_params);
-                        // _v1 = activation_ps(_v1, activation_type, activation_params);
-                        // _v0 = vmulq_f32(_v0, _scale_out);
-                        // _v1 = vmulq_f32(_v1, _scale_out);
-                        // vst1_s8(ptr, float2int8(_v0, _v1));
                     }
                 }
                 else
@@ -314,19 +219,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out, vl);
                         *(int64_t *)ptr = float2int8(_v0);
-                        // float32x4_t _scale_in0 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + i * 8);
-                        // float32x4_t _scale_in1 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + i * 8 + 4);
-                        // float32x4_t _bias0 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + i * 8);
-                        // float32x4_t _bias1 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + i * 8 + 4);
-                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32((intptr + 4)));
-                        // _v0 = vmlaq_f32(_bias0, _v0, _scale_in0);
-                        // _v1 = vmlaq_f32(_bias1, _v1, _scale_in1);
-                        // _v0 = activation_ps(_v0, activation_type, activation_params);
-                        // _v1 = activation_ps(_v1, activation_type, activation_params);
-                        // _v0 = vmulq_f32(_v0, _scale_out);
-                        // _v1 = vmulq_f32(_v1, _scale_out);
-                        // vst1_s8(ptr, float2int8(_v0, _v1));
                     }
                 }
             }
@@ -347,24 +239,10 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out0, vl);
                         *(int64_t *)ptr = float2int8(_v0);
-                        // float32x4_t _scale_in0 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + i * 8);
-                        // float32x4_t _scale_in1 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + i * 8 + 4);
-                        // float32x4_t _scale_out0 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + i * 8);
-                        // float32x4_t _scale_out1 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + i * 8 + 4);
-                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32((intptr + 4)));
-                        // _v0 = vmulq_f32(_v0, _scale_in0);
-                        // _v1 = vmulq_f32(_v1, _scale_in1);
-                        // _v0 = activation_ps(_v0, activation_type, activation_params);
-                        // _v1 = activation_ps(_v1, activation_type, activation_params);
-                        // _v0 = vmulq_f32(_v0, _scale_out0);
-                        // _v1 = vmulq_f32(_v1, _scale_out1);
-                        // vst1_s8(ptr, float2int8(_v0, _v1));
                     }
                 }
                 else if (bias_data_size == 1)
                 {
-                    // float32x4_t _bias = vdupq_n_f32(bias_data[0]);
                     vfloat32m2_t _bias = vfmv_v_f_f32m2(bias_data[0], vl);
 
                     #pragma omp parallel for num_threads(opt.num_threads)
@@ -380,20 +258,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out0, vl);
                         *(int64_t *)ptr = float2int8(_v0);
-
-                        // float32x4_t _scale_in0 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + i * 8);
-                        // float32x4_t _scale_in1 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + i * 8 + 4);
-                        // float32x4_t _scale_out0 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + i * 8);
-                        // float32x4_t _scale_out1 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + i * 8 + 4);
-                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32((intptr + 4)));
-                        // _v0 = vmlaq_f32(_bias, _v0, _scale_in0);
-                        // _v1 = vmlaq_f32(_bias, _v1, _scale_in1);
-                        // _v0 = activation_ps(_v0, activation_type, activation_params);
-                        // _v1 = activation_ps(_v1, activation_type, activation_params);
-                        // _v0 = vmulq_f32(_v0, _scale_out0);
-                        // _v1 = vmulq_f32(_v1, _scale_out1);
-                        // vst1_s8(ptr, float2int8(_v0, _v1));
                     }
                 }
                 else
@@ -412,22 +276,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out0, vl);
                         *(int64_t *)ptr = float2int8(_v0);
-
-                        // float32x4_t _scale_in0 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + i * 8);
-                        // float32x4_t _scale_in1 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + i * 8 + 4);
-                        // float32x4_t _scale_out0 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + i * 8);
-                        // float32x4_t _scale_out1 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + i * 8 + 4);
-                        // float32x4_t _bias0 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + i * 8);
-                        // float32x4_t _bias1 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + i * 8 + 4);
-                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32((intptr + 4)));
-                        // _v0 = vmlaq_f32(_bias0, _v0, _scale_in0);
-                        // _v1 = vmlaq_f32(_bias1, _v1, _scale_in1);
-                        // _v0 = activation_ps(_v0, activation_type, activation_params);
-                        // _v1 = activation_ps(_v1, activation_type, activation_params);
-                        // _v0 = vmulq_f32(_v0, _scale_out0);
-                        // _v1 = vmulq_f32(_v1, _scale_out1);
-                        // vst1_s8(ptr, float2int8(_v0, _v1));
                     }
                 }
             }
@@ -452,10 +300,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
 
                     vfloat32m2_t _scale_in0 = scale_in_data_size == 1 ? vfmv_v_f_f32m2(scale_in_data[0], vl) : vle32_v_f32m2((const float*)scale_in_data + i * 8, vl);
                     vfloat32m2_t _scale_out0 = scale_out_data_size == 1 ? vfmv_v_f_f32m2(scale_out_data[0], vl) : vle32_v_f32m2((const float*)scale_out_data + i * 8, vl);
-                    // float32x4_t _scale_in0 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + i * 8);
-                    // float32x4_t _scale_in1 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + i * 8 + 4);
-                    // float32x4_t _scale_out0 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + i * 8);
-                    // float32x4_t _scale_out1 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + i * 8 + 4);
 
                     for (int j = 0; j < w; j++)
                     {
@@ -464,16 +308,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out0, vl);
                         *(int64_t *)ptr = float2int8(_v0);
-
-                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32((intptr + 4)));
-                        // _v0 = vmulq_f32(_v0, _scale_in0);
-                        // _v1 = vmulq_f32(_v1, _scale_in1);
-                        // _v0 = activation_ps(_v0, activation_type, activation_params);
-                        // _v1 = activation_ps(_v1, activation_type, activation_params);
-                        // _v0 = vmulq_f32(_v0, _scale_out0);
-                        // _v1 = vmulq_f32(_v1, _scale_out1);
-                        // vst1_s8(ptr, float2int8(_v0, _v1));
 
                         intptr += 8;
                         ptr += 8;
@@ -491,12 +325,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                     vfloat32m2_t _scale_in0 = scale_in_data_size == 1 ? vfmv_v_f_f32m2(scale_in_data[0], vl) : vle32_v_f32m2((const float*)scale_in_data + i * 8, vl);
                     vfloat32m2_t _scale_out0 = scale_out_data_size == 1 ? vfmv_v_f_f32m2(scale_out_data[0], vl) : vle32_v_f32m2((const float*)scale_out_data + i * 8, vl);
                     vfloat32m2_t _bias0 = bias_data_size == 1 ? vfmv_v_f_f32m2(bias_data[0], vl) : vle32_v_f32m2((const float*)bias_data + i * 8, vl);
-                    // float32x4_t _scale_in0 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + i * 8);
-                    // float32x4_t _scale_in1 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + i * 8 + 4);
-                    // float32x4_t _scale_out0 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + i * 8);
-                    // float32x4_t _scale_out1 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + i * 8 + 4);
-                    // float32x4_t _bias0 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + i * 8);
-                    // float32x4_t _bias1 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + i * 8 + 4);
 
                     for (int j = 0; j < w; j++)
                     {
@@ -506,15 +334,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out0, vl);
                         *(int64_t *)ptr = float2int8(_v0);
 
-                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32((intptr + 4)));
-                        // _v0 = vmlaq_f32(_bias0, _v0, _scale_in0);
-                        // _v1 = vmlaq_f32(_bias1, _v1, _scale_in1);
-                        // _v0 = activation_ps(_v0, activation_type, activation_params);
-                        // _v1 = activation_ps(_v1, activation_type, activation_params);
-                        // _v0 = vmulq_f32(_v0, _scale_out0);
-                        // _v1 = vmulq_f32(_v1, _scale_out1);
-                        // vst1_s8(ptr, float2int8(_v0, _v1));
                         intptr += 8;
                         ptr += 8;
                     }
@@ -555,10 +374,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
 
                     vfloat32m2_t _scale_in0 = scale_in_data_size == 1 ? vfmv_v_f_f32m2(scale_in_data[0], vl) : vle32_v_f32m2((const float*)scale_in_data + q * 8, vl);
                     vfloat32m2_t _scale_out0 = scale_out_data_size == 1 ? vfmv_v_f_f32m2(scale_out_data[0], vl) : vle32_v_f32m2((const float*)scale_out_data + q * 8, vl);
-                    // float32x4_t _scale_in0 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + q * 8);
-                    // float32x4_t _scale_in1 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + q * 8 + 4);
-                    // float32x4_t _scale_out0 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + q * 8);
-                    // float32x4_t _scale_out1 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + q * 8 + 4);
 
                     for (int i = 0; i < size; i++)
                     {
@@ -567,16 +382,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out0, vl);
                         *(int64_t *)ptr = float2int8(_v0);
-
-                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32((intptr + 4)));
-                        // _v0 = vmulq_f32(_v0, _scale_in0);
-                        // _v1 = vmulq_f32(_v1, _scale_in1);
-                        // _v0 = activation_ps(_v0, activation_type, activation_params);
-                        // _v1 = activation_ps(_v1, activation_type, activation_params);
-                        // _v0 = vmulq_f32(_v0, _scale_out0);
-                        // _v1 = vmulq_f32(_v1, _scale_out1);
-                        // vst1_s8(ptr, float2int8(_v0, _v1));
 
                         intptr += 8;
                         ptr += 8;
@@ -594,12 +399,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                     vfloat32m2_t _scale_in0 = scale_in_data_size == 1 ? vfmv_v_f_f32m2(scale_in_data[0], vl) : vle32_v_f32m2((const float*)scale_in_data + q * 8, vl);
                     vfloat32m2_t _scale_out0 = scale_out_data_size == 1 ? vfmv_v_f_f32m2(scale_out_data[0], vl) : vle32_v_f32m2((const float*)scale_out_data + q * 8, vl);
                     vfloat32m2_t _bias0 = bias_data_size == 1 ? vfmv_v_f_f32m2(bias_data[0], vl) : vle32_v_f32m2((const float*)bias_data + q * 8, vl);
-                    // float32x4_t _scale_in0 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + q * 8);
-                    // float32x4_t _scale_in1 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + q * 8 + 4);
-                    // float32x4_t _scale_out0 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + q * 8);
-                    // float32x4_t _scale_out1 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + q * 8 + 4);
-                    // float32x4_t _bias0 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + q * 8);
-                    // float32x4_t _bias1 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + q * 8 + 4);
 
                     for (int i = 0; i < size; i++)
                     {
@@ -608,15 +407,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v0 = activation_ps(_v0, activation_type, activation_params, vl);
                         _v0 = vfmul_vv_f32m2(_v0, _scale_out0, vl);
                         *(int64_t *)ptr = float2int8(_v0);
-                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32((intptr + 4)));
-                        // _v0 = vmlaq_f32(_bias0, _v0, _scale_in0);
-                        // _v1 = vmlaq_f32(_bias1, _v1, _scale_in1);
-                        // _v0 = activation_ps(_v0, activation_type, activation_params);
-                        // _v1 = activation_ps(_v1, activation_type, activation_params);
-                        // _v0 = vmulq_f32(_v0, _scale_out0);
-                        // _v1 = vmulq_f32(_v1, _scale_out1);
-                        // vst1_s8(ptr, float2int8(_v0, _v1));
 
                         intptr += 8;
                         ptr += 8;
@@ -630,7 +420,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
 
     if (elempack == 4)
     {
-        fprintf(stderr, "requantize_riscv elempack == 4\n");
         vl = 4;
         if (dims == 1)
         {
@@ -646,8 +435,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
             {
                 vfloat32m1_t _scale_in = vfmv_v_f_f32m1(scale_in_data[0], vl);
                 vfloat32m1_t _scale_out = vfmv_v_f_f32m1(scale_out_data[0], vl);
-                // float32x4_t _scale_in = vdupq_n_f32(scale_in_data[0]);
-                // float32x4_t _scale_out = vdupq_n_f32(scale_out_data[0]);
 
                 if (bias_data_size == 0)
                 {
@@ -662,20 +449,10 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v = activation_ps(_v, activation_type, activation_params, vl);
                         _v = vfmul_vv_f32m1(_v, _scale_out, vl);
                         *(int32_t *)ptr = float2int8(_v);
-                        // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // _v = vmulq_f32(_v, _scale_in);
-                        // _v = activation_ps(_v, activation_type, activation_params);
-                        // _v = vmulq_f32(_v, _scale_out);
-                        // int8x8_t v = float2int8(_v, _v);
-                        // ptr[0] = vget_lane_s8(v, 0);
-                        // ptr[1] = vget_lane_s8(v, 1);
-                        // ptr[2] = vget_lane_s8(v, 2);
-                        // ptr[3] = vget_lane_s8(v, 3);
                     }
                 }
                 else if (bias_data_size == 1)
                 {
-                    // float32x4_t _bias = vdupq_n_f32(bias_data[0]);
                     vfloat32m1_t _bias = vfmv_v_f_f32m1(bias_data[0], vl);
 
                     #pragma omp parallel for num_threads(opt.num_threads)
@@ -689,16 +466,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v = activation_ps(_v, activation_type, activation_params, vl);
                         _v = vfmul_vv_f32m1(_v, _scale_out, vl);
                         *(int32_t *)ptr = float2int8(_v);
-
-                        // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // _v = vmlaq_f32(_bias, _v, _scale_in);
-                        // _v = activation_ps(_v, activation_type, activation_params);
-                        // _v = vmulq_f32(_v, _scale_out);
-                        // int8x8_t v = float2int8(_v, _v);
-                        // ptr[0] = vget_lane_s8(v, 0);
-                        // ptr[1] = vget_lane_s8(v, 1);
-                        // ptr[2] = vget_lane_s8(v, 2);
-                        // ptr[3] = vget_lane_s8(v, 3);
                     }
                 }
                 else
@@ -714,18 +481,7 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v = vfmacc_vv_f32m1(_bias, _v, _scale_in, vl);
                         _v = activation_ps(_v, activation_type, activation_params, vl);
                         _v = vfmul_vv_f32m1(_v, _scale_out, vl);
-                        // print_vfloat32m1(_v);
                         *(int32_t *)ptr = float2int8(_v);
-                        // float32x4_t _bias = vld1q_f32((const float*)bias_data + i * 4);
-                        // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // _v = vmlaq_f32(_bias, _v, _scale_in);
-                        // _v = activation_ps(_v, activation_type, activation_params);
-                        // _v = vmulq_f32(_v, _scale_out);
-                        // int8x8_t v = float2int8(_v, _v);
-                        // ptr[0] = vget_lane_s8(v, 0);
-                        // ptr[1] = vget_lane_s8(v, 1);
-                        // ptr[2] = vget_lane_s8(v, 2);
-                        // ptr[3] = vget_lane_s8(v, 3);
                     }
                 }
             }
@@ -748,22 +504,11 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v = activation_ps(_v, activation_type, activation_params, vl);
                         _v = vfmul_vv_f32m1(_v, _scale_out, vl);
                         *(int32_t *)ptr = float2int8(_v);
-                        // float32x4_t _scale_out = vld1q_f32((const float*)scale_out_data + i * 4);
-                        // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // _v = vmulq_f32(_v, _scale_in);
-                        // _v = activation_ps(_v, activation_type, activation_params);
-                        // _v = vmulq_f32(_v, _scale_out);
-                        // int8x8_t v = float2int8(_v, _v);
-                        // ptr[0] = vget_lane_s8(v, 0);
-                        // ptr[1] = vget_lane_s8(v, 1);
-                        // ptr[2] = vget_lane_s8(v, 2);
-                        // ptr[3] = vget_lane_s8(v, 3);
                     }
                 }
                 else if (bias_data_size == 1)
                 {
                     vfloat32m1_t _bias = vfmv_v_f_f32m1(bias_data[0], vl);
-                    // float32x4_t _bias = vdupq_n_f32(bias_data[0]);
 
                     #pragma omp parallel for num_threads(opt.num_threads)
                     for (int i = 0; i < w; i++)
@@ -777,16 +522,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v = activation_ps(_v, activation_type, activation_params, vl);
                         _v = vfmul_vv_f32m1(_v, _scale_out, vl);
                         *(int32_t *)ptr = float2int8(_v);
-                        // float32x4_t _scale_out = vld1q_f32((const float*)scale_out_data + i * 4);
-                        // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // _v = vmlaq_f32(_bias, _v, _scale_in);
-                        // _v = activation_ps(_v, activation_type, activation_params);
-                        // _v = vmulq_f32(_v, _scale_out);
-                        // int8x8_t v = float2int8(_v, _v);
-                        // ptr[0] = vget_lane_s8(v, 0);
-                        // ptr[1] = vget_lane_s8(v, 1);
-                        // ptr[2] = vget_lane_s8(v, 2);
-                        // ptr[3] = vget_lane_s8(v, 3);
                     }
                 }
                 else
@@ -804,17 +539,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v = activation_ps(_v, activation_type, activation_params, vl);
                         _v = vfmul_vv_f32m1(_v, _scale_out, vl);
                         *(int32_t *)ptr = float2int8(_v);
-                        // float32x4_t _scale_out = vld1q_f32((const float*)scale_out_data + i * 4);
-                        // float32x4_t _bias = vld1q_f32((const float*)bias_data + i * 4);
-                        // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // _v = vmlaq_f32(_bias, _v, _scale_in);
-                        // _v = activation_ps(_v, activation_type, activation_params);
-                        // _v = vmulq_f32(_v, _scale_out);
-                        // int8x8_t v = float2int8(_v, _v);
-                        // ptr[0] = vget_lane_s8(v, 0);
-                        // ptr[1] = vget_lane_s8(v, 1);
-                        // ptr[2] = vget_lane_s8(v, 2);
-                        // ptr[3] = vget_lane_s8(v, 3);
                     }
                 }
             }
@@ -837,16 +561,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v = activation_ps(_v, activation_type, activation_params, vl);
                         _v = vfmul_vv_f32m1(_v, _scale_out, vl);
                         *(int32_t *)ptr = float2int8(_v);
-                        // float32x4_t _scale_in = vld1q_f32((const float*)scale_in_data + i * 4);
-                        // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // _v = vmulq_f32(_v, _scale_in);
-                        // _v = activation_ps(_v, activation_type, activation_params);
-                        // _v = vmulq_f32(_v, _scale_out);
-                        // int8x8_t v = float2int8(_v, _v);
-                        // ptr[0] = vget_lane_s8(v, 0);
-                        // ptr[1] = vget_lane_s8(v, 1);
-                        // ptr[2] = vget_lane_s8(v, 2);
-                        // ptr[3] = vget_lane_s8(v, 3);
                     }
                 }
                 else if (bias_data_size == 1)
@@ -866,17 +580,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v = activation_ps(_v, activation_type, activation_params, vl);
                         _v = vfmul_vv_f32m1(_v, _scale_out, vl);
                         *(int32_t *)ptr = float2int8(_v);
-                        
-                        // float32x4_t _scale_in = vld1q_f32((const float*)scale_in_data + i * 4);
-                        // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // _v = vmlaq_f32(_bias, _v, _scale_in);
-                        // _v = activation_ps(_v, activation_type, activation_params);
-                        // _v = vmulq_f32(_v, _scale_out);
-                        // int8x8_t v = float2int8(_v, _v);
-                        // ptr[0] = vget_lane_s8(v, 0);
-                        // ptr[1] = vget_lane_s8(v, 1);
-                        // ptr[2] = vget_lane_s8(v, 2);
-                        // ptr[3] = vget_lane_s8(v, 3);
                     }
                 }
                 else
@@ -894,17 +597,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v = activation_ps(_v, activation_type, activation_params, vl);
                         _v = vfmul_vv_f32m1(_v, _scale_out, vl);
                         *(int32_t *)ptr = float2int8(_v);
-                        // float32x4_t _scale_in = vld1q_f32((const float*)scale_in_data + i * 4);
-                        // float32x4_t _bias = vld1q_f32((const float*)bias_data + i * 4);
-                        // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // _v = vmlaq_f32(_bias, _v, _scale_in);
-                        // _v = activation_ps(_v, activation_type, activation_params);
-                        // _v = vmulq_f32(_v, _scale_out);
-                        // int8x8_t v = float2int8(_v, _v);
-                        // ptr[0] = vget_lane_s8(v, 0);
-                        // ptr[1] = vget_lane_s8(v, 1);
-                        // ptr[2] = vget_lane_s8(v, 2);
-                        // ptr[3] = vget_lane_s8(v, 3);
                     }
                 }
             }
@@ -926,24 +618,11 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v = activation_ps(_v, activation_type, activation_params, vl);
                         _v = vfmul_vv_f32m1(_v, _scale_out, vl);
                         *(int32_t *)ptr = float2int8(_v);
-
-                        // float32x4_t _scale_in = vld1q_f32((const float*)scale_in_data + i * 4);
-                        // float32x4_t _scale_out = vld1q_f32((const float*)scale_out_data + i * 4);
-                        // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // _v = vmulq_f32(_v, _scale_in);
-                        // _v = activation_ps(_v, activation_type, activation_params);
-                        // _v = vmulq_f32(_v, _scale_out);
-                        // int8x8_t v = float2int8(_v, _v);
-                        // ptr[0] = vget_lane_s8(v, 0);
-                        // ptr[1] = vget_lane_s8(v, 1);
-                        // ptr[2] = vget_lane_s8(v, 2);
-                        // ptr[3] = vget_lane_s8(v, 3);
                     }
                 }
                 else if (bias_data_size == 1)
                 {
                     vfloat32m1_t _bias = vfmv_v_f_f32m1(bias_data[0], vl);
-                    // float32x4_t _bias = vdupq_n_f32(bias_data[0]);
 
                     #pragma omp parallel for num_threads(opt.num_threads)
                     for (int i = 0; i < w; i++)
@@ -958,17 +637,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v = activation_ps(_v, activation_type, activation_params, vl);
                         _v = vfmul_vv_f32m1(_v, _scale_out, vl);
                         *(int32_t *)ptr = float2int8(_v);
-                        // float32x4_t _scale_in = vld1q_f32((const float*)scale_in_data + i * 4);
-                        // float32x4_t _scale_out = vld1q_f32((const float*)scale_out_data + i * 4);
-                        // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // _v = vmlaq_f32(_bias, _v, _scale_in);
-                        // _v = activation_ps(_v, activation_type, activation_params);
-                        // _v = vmulq_f32(_v, _scale_out);
-                        // int8x8_t v = float2int8(_v, _v);
-                        // ptr[0] = vget_lane_s8(v, 0);
-                        // ptr[1] = vget_lane_s8(v, 1);
-                        // ptr[2] = vget_lane_s8(v, 2);
-                        // ptr[3] = vget_lane_s8(v, 3);
                     }
                 }
                 else
@@ -987,19 +655,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         _v = activation_ps(_v, activation_type, activation_params, vl);
                         _v = vfmul_vv_f32m1(_v, _scale_out, vl);
                         *(int32_t *)ptr = float2int8(_v);
-
-                        // float32x4_t _scale_in = vld1q_f32((const float*)scale_in_data + i * 4);
-                        // float32x4_t _scale_out = vld1q_f32((const float*)scale_out_data + i * 4);
-                        // float32x4_t _bias = vld1q_f32((const float*)bias_data + i * 4);
-                        // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
-                        // _v = vmlaq_f32(_bias, _v, _scale_in);
-                        // _v = activation_ps(_v, activation_type, activation_params);
-                        // _v = vmulq_f32(_v, _scale_out);
-                        // int8x8_t v = float2int8(_v, _v);
-                        // ptr[0] = vget_lane_s8(v, 0);
-                        // ptr[1] = vget_lane_s8(v, 1);
-                        // ptr[2] = vget_lane_s8(v, 2);
-                        // ptr[3] = vget_lane_s8(v, 3);
                     }
                 }
             }
@@ -1027,10 +682,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         const int* intptr1 = bottom_blob.row<const int>(i * 2 + 1);
                         signed char* ptr = top_blob.row<signed char>(i);
 
-                        // float32x4_t _scale_in0 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + i * 8);
-                        // float32x4_t _scale_in1 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + i * 8 + 4);
-                        // float32x4_t _scale_out0 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + i * 8);
-                        // float32x4_t _scale_out1 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + i * 8 + 4);
                         vfloat32m1_t _scale_in0 = scale_in_data_size == 1 ? vfmv_v_f_f32m1(scale_in_data[0], vl) : vle32_v_f32m1((const float*)scale_in_data + i * 8, vl);
                         vfloat32m1_t _scale_in1 = scale_in_data_size == 1 ? vfmv_v_f_f32m1(scale_in_data[0], vl) : vle32_v_f32m1((const float*)scale_in_data + i * 8 + 4, vl);
                         vfloat32m1_t _scale_out0 = scale_out_data_size == 1 ? vfmv_v_f_f32m1(scale_out_data[0], vl) : vle32_v_f32m1((const float*)scale_out_data + i * 8, vl);
@@ -1048,15 +699,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                             _v0 = vfmul_vv_f32m1(_v0, _scale_out0, vl);
                             _v1 = vfmul_vv_f32m1(_v1, _scale_out1, vl);
                             *(int64_t *)ptr = float2int8(_v0, _v1);
-                            // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr0));
-                            // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr1));
-                            // _v0 = vmulq_f32(_v0, _scale_in0);
-                            // _v1 = vmulq_f32(_v1, _scale_in1);
-                            // _v0 = activation_ps(_v0, activation_type, activation_params);
-                            // _v1 = activation_ps(_v1, activation_type, activation_params);
-                            // _v0 = vmulq_f32(_v0, _scale_out0);
-                            // _v1 = vmulq_f32(_v1, _scale_out1);
-                            // vst1_s8(ptr, float2int8(_v0, _v1));
 
                             intptr0 += 4;
                             intptr1 += 4;
@@ -1073,12 +715,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         const int* intptr1 = bottom_blob.row<const int>(i * 2 + 1);
                         signed char* ptr = top_blob.row<signed char>(i);
 
-                        // float32x4_t _scale_in0 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + i * 8);
-                        // float32x4_t _scale_in1 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + i * 8 + 4);
-                        // float32x4_t _scale_out0 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + i * 8);
-                        // float32x4_t _scale_out1 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + i * 8 + 4);
-                        // float32x4_t _bias0 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + i * 8);
-                        // float32x4_t _bias1 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + i * 8 + 4);
                         vfloat32m1_t _scale_in0 = scale_in_data_size == 1 ? vfmv_v_f_f32m1(scale_in_data[0], vl) : vle32_v_f32m1((const float*)scale_in_data + i * 8, vl);
                         vfloat32m1_t _scale_in1 = scale_in_data_size == 1 ? vfmv_v_f_f32m1(scale_in_data[0], vl) : vle32_v_f32m1((const float*)scale_in_data + i * 8 + 4, vl);
                         vfloat32m1_t _scale_out0 = scale_out_data_size == 1 ? vfmv_v_f_f32m1(scale_out_data[0], vl) : vle32_v_f32m1((const float*)scale_out_data + i * 8, vl);
@@ -1097,16 +733,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                             _v0 = vfmul_vv_f32m1(_v0, _scale_out0, vl);
                             _v1 = vfmul_vv_f32m1(_v1, _scale_out1, vl);
                             *(int64_t *)ptr = float2int8(_v0, _v1);
-
-                            // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr0));
-                            // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr1));
-                            // _v0 = vmlaq_f32(_bias0, _v0, _scale_in0);
-                            // _v1 = vmlaq_f32(_bias1, _v1, _scale_in1);
-                            // _v0 = activation_ps(_v0, activation_type, activation_params);
-                            // _v1 = activation_ps(_v1, activation_type, activation_params);
-                            // _v0 = vmulq_f32(_v0, _scale_out0);
-                            // _v1 = vmulq_f32(_v1, _scale_out1);
-                            // vst1_s8(ptr, float2int8(_v0, _v1));
 
                             intptr0 += 4;
                             intptr1 += 4;
@@ -1130,8 +756,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
 
                         vfloat32m1_t _scale_in = scale_in_data_size == 1 ? vfmv_v_f_f32m1(scale_in_data[0], vl) : vle32_v_f32m1((const float*)scale_in_data + i * 4, vl);
                         vfloat32m1_t _scale_out = scale_out_data_size == 1 ? vfmv_v_f_f32m1(scale_out_data[0], vl) : vle32_v_f32m1((const float*)scale_out_data + i * 4, vl);
-                        // float32x4_t _scale_in = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + i * 4);
-                        // float32x4_t _scale_out = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + i * 4);
 
                         for (int j = 0; j < w; j++)
                         {
@@ -1144,16 +768,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                             ptr1[0] = (res >> 8) & 0xff;
                             ptr2[0] = (res >> 16) & 0xff;
                             ptr3[0] = (res >> 24) & 0xff;      
-                            // *(int32_t *)ptr0 = float2int8(_v);
-                            // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
-                            // _v = vmulq_f32(_v, _scale_in);
-                            // _v = activation_ps(_v, activation_type, activation_params);
-                            // _v = vmulq_f32(_v, _scale_out);
-                            // int8x8_t v = float2int8(_v, _v);
-                            // ptr0[0] = vget_lane_s8(v, 0);
-                            // ptr1[0] = vget_lane_s8(v, 1);
-                            // ptr2[0] = vget_lane_s8(v, 2);
-                            // ptr3[0] = vget_lane_s8(v, 3);
 
                             intptr += 4;
                             ptr0 += 1;
@@ -1177,9 +791,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         vfloat32m1_t _scale_in = scale_in_data_size == 1 ? vfmv_v_f_f32m1(scale_in_data[0], vl) : vle32_v_f32m1((const float*)scale_in_data + i * 4, vl);
                         vfloat32m1_t _scale_out = scale_out_data_size == 1 ? vfmv_v_f_f32m1(scale_out_data[0], vl) : vle32_v_f32m1((const float*)scale_out_data + i * 4, vl);
                         vfloat32m1_t _bias = bias_data_size == 1 ? vfmv_v_f_f32m1(bias_data[0], vl) : vle32_v_f32m1((const float*)bias_data + i * 4, vl);
-                        // float32x4_t _scale_in = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + i * 4);
-                        // float32x4_t _scale_out = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + i * 4);
-                        // float32x4_t _bias = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + i * 4);
 
                         for (int j = 0; j < w; j++)
                         {
@@ -1193,15 +804,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                             ptr1[0] = (res >> 8) & 0xff;
                             ptr2[0] = (res >> 16) & 0xff;
                             ptr3[0] = (res >> 24) & 0xff;                           
-                            // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
-                            // _v = vmlaq_f32(_bias, _v, _scale_in);
-                            // _v = activation_ps(_v, activation_type, activation_params);
-                            // _v = vmulq_f32(_v, _scale_out);
-                            // int8x8_t v = float2int8(_v, _v);
-                            // ptr0[0] = vget_lane_s8(v, 0);
-                            // ptr1[0] = vget_lane_s8(v, 1);
-                            // ptr2[0] = vget_lane_s8(v, 2);
-                            // ptr3[0] = vget_lane_s8(v, 3);
 
                             intptr += 4;
                             ptr0 += 1;
@@ -1255,11 +857,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         vfloat32m1_t _scale_out0 = scale_out_data_size == 1 ? vfmv_v_f_f32m1(scale_out_data[0], vl) : vle32_v_f32m1((const float*)scale_out_data + q * 8, vl);
                         vfloat32m1_t _scale_out1 = scale_out_data_size == 1 ? vfmv_v_f_f32m1(scale_out_data[0], vl) : vle32_v_f32m1((const float*)scale_out_data + q * 8 + 4, vl);
 
-                        // float32x4_t _scale_in0 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + q * 8);
-                        // float32x4_t _scale_in1 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + q * 8 + 4);
-                        // float32x4_t _scale_out0 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + q * 8);
-                        // float32x4_t _scale_out1 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + q * 8 + 4);
-
                         for (int i = 0; i < size; i++)
                         {
                             vfloat32m1_t _v0 = vfcvt_f_x_v_f32m1(vle32_v_i32m1(intptr0, vl), vl);
@@ -1271,15 +868,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                             _v0 = vfmul_vv_f32m1(_v0, _scale_out0, vl);
                             _v1 = vfmul_vv_f32m1(_v1, _scale_out1, vl);
                             *(int64_t *)ptr = float2int8(_v0, _v1);
-                            // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr0));
-                            // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr1));
-                            // _v0 = vmulq_f32(_v0, _scale_in0);
-                            // _v1 = vmulq_f32(_v1, _scale_in1);
-                            // _v0 = activation_ps(_v0, activation_type, activation_params);
-                            // _v1 = activation_ps(_v1, activation_type, activation_params);
-                            // _v0 = vmulq_f32(_v0, _scale_out0);
-                            // _v1 = vmulq_f32(_v1, _scale_out1);
-                            // vst1_s8(ptr, float2int8(_v0, _v1));
 
                             intptr0 += 4;
                             intptr1 += 4;
@@ -1302,13 +890,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         vfloat32m1_t _scale_out1 = scale_out_data_size == 1 ? vfmv_v_f_f32m1(scale_out_data[0], vl) : vle32_v_f32m1((const float*)scale_out_data + q * 8 + 4, vl);
                         vfloat32m1_t _bias0 = bias_data_size == 1 ? vfmv_v_f_f32m1(bias_data[0], vl) : vle32_v_f32m1((const float*)bias_data + q * 8, vl);
                         vfloat32m1_t _bias1 = bias_data_size == 1 ? vfmv_v_f_f32m1(bias_data[0], vl) : vle32_v_f32m1((const float*)bias_data + q * 8 + 4, vl);
-                        // float32x4_t _scale_in0 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + q * 8);
-                        // float32x4_t _scale_in1 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + q * 8 + 4);
-                        // float32x4_t _scale_out0 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + q * 8);
-                        // float32x4_t _scale_out1 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + q * 8 + 4);
-                        // float32x4_t _bias0 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + q * 8);
-                        // float32x4_t _bias1 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + q * 8 + 4);
-
                         for (int i = 0; i < size; i++)
                         {
                             vfloat32m1_t _v0 = vfcvt_f_x_v_f32m1(vle32_v_i32m1(intptr0, vl), vl);
@@ -1320,15 +901,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                             _v0 = vfmul_vv_f32m1(_v0, _scale_out0, vl);
                             _v1 = vfmul_vv_f32m1(_v1, _scale_out1, vl);
                             *(int64_t *)ptr = float2int8(_v0, _v1);
-                            // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr0));
-                            // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr1));
-                            // _v0 = vmlaq_f32(_bias0, _v0, _scale_in0);
-                            // _v1 = vmlaq_f32(_bias1, _v1, _scale_in1);
-                            // _v0 = activation_ps(_v0, activation_type, activation_params);
-                            // _v1 = activation_ps(_v1, activation_type, activation_params);
-                            // _v0 = vmulq_f32(_v0, _scale_out0);
-                            // _v1 = vmulq_f32(_v1, _scale_out1);
-                            // vst1_s8(ptr, float2int8(_v0, _v1));
 
                             intptr0 += 4;
                             intptr1 += 4;
@@ -1366,15 +938,6 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                             ptr1[0] = (res >> 8) & 0xff;
                             ptr2[0] = (res >> 16) & 0xff;
                             ptr3[0] = (res >> 24) & 0xff;
-                            // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
-                            // _v = vmulq_f32(_v, _scale_in);
-                            // _v = activation_ps(_v, activation_type, activation_params);
-                            // _v = vmulq_f32(_v, _scale_out);
-                            // int8x8_t v = float2int8(_v, _v);
-                            // ptr0[0] = vget_lane_s8(v, 0);
-                            // ptr1[0] = vget_lane_s8(v, 1);
-                            // ptr2[0] = vget_lane_s8(v, 2);
-                            // ptr3[0] = vget_lane_s8(v, 3);
 
                             intptr += 4;
                             ptr0 += 1;
@@ -1399,31 +962,17 @@ int Requantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
                         vfloat32m1_t _scale_out = scale_out_data_size == 1 ? vfmv_v_f_f32m1(scale_out_data[0], vl) : vle32_v_f32m1((const float*)scale_out_data + q * 4, vl);
                         vfloat32m1_t _bias = bias_data_size == 1 ? vfmv_v_f_f32m1(bias_data[0], vl) : vle32_v_f32m1((const float*)bias_data + q * 4, vl);
 
-                        // float32x4_t _scale_in = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + q * 4);
-                        // float32x4_t _scale_out = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + q * 4);
-                        // float32x4_t _bias = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + q * 4);
-
                         for (int i = 0; i < size; i++)
                         {
                             vfloat32m1_t _v = vfcvt_f_x_v_f32m1(vle32_v_i32m1(intptr, vl), vl);
                             _v = vfmacc_vv_f32m1(_bias, _v, _scale_in, vl);
                             _v = activation_ps(_v, activation_type, activation_params, vl);
                             _v = vfmul_vv_f32m1(_v, _scale_out, vl);
-                            // print_vfloat32m1(_v);
                             int res = float2int8(_v);
                             ptr0[0] = (res) & 0xff;
                             ptr1[0] = (res >> 8) & 0xff;
                             ptr2[0] = (res >> 16) & 0xff;
                             ptr3[0] = (res >> 24) & 0xff;
-                            // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
-                            // _v = vmlaq_f32(_bias, _v, _scale_in);
-                            // _v = activation_ps(_v, activation_type, activation_params);
-                            // _v = vmulq_f32(_v, _scale_out);
-                            // int8x8_t v = float2int8(_v, _v);
-                            // ptr0[0] = vget_lane_s8(v, 0);
-                            // ptr1[0] = vget_lane_s8(v, 1);
-                            // ptr2[0] = vget_lane_s8(v, 2);
-                            // ptr3[0] = vget_lane_s8(v, 3);
 
                             intptr += 4;
                             ptr0 += 1;

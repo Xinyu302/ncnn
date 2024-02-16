@@ -41,15 +41,7 @@ static void requantize_relu_pack8_rvv(const Mat& bottom_blob, Mat& top_blob, con
             vfloat32m2_t _scale_in0 = scale_in_data_size == 1 ? vfmv_v_f_f32m2(scale_in_data[0], vl) : vle32_v_f32m2((const float*)scale_in_data + q * 8, vl);
             vfloat32m2_t _scale_out0 = scale_out_data_size == 1 ? vfmv_v_f_f32m2(scale_out_data[0], vl) : vle32_v_f32m2((const float*)scale_out_data + q * 8, vl);
 
-            // float32x4_t _scale_in0 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + q * 8);
-            // float32x4_t _scale_in1 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + q * 8 + 4);
-            // float32x4_t _scale_out0 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + q * 8);
-            // float32x4_t _scale_out1 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + q * 8 + 4);
-
             vfloat32m2_t _scale0 = vfmul_vv_f32m2(_scale_in0, _scale_out0, vl);
-
-            // float32x4_t _scale0 = vmulq_f32(_scale_in0, _scale_out0);
-            // float32x4_t _scale1 = vmulq_f32(_scale_in1, _scale_out1);
 
             int i = 0;
             for (; i + 3 < size; i += 4)
@@ -64,31 +56,10 @@ static void requantize_relu_pack8_rvv(const Mat& bottom_blob, Mat& top_blob, con
                 _v45 = vfmul_vv_f32m2(_v45, _scale0, vl);
                 _v67 = vfmul_vv_f32m2(_v67, _scale0, vl);
 
-                // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
-                // float32x4_t _v2 = vcvtq_f32_s32(vld1q_s32(intptr + 8));
-                // float32x4_t _v3 = vcvtq_f32_s32(vld1q_s32(intptr + 12));
-                // float32x4_t _v4 = vcvtq_f32_s32(vld1q_s32(intptr + 16));
-                // float32x4_t _v5 = vcvtq_f32_s32(vld1q_s32(intptr + 20));
-                // float32x4_t _v6 = vcvtq_f32_s32(vld1q_s32(intptr + 24));
-                // float32x4_t _v7 = vcvtq_f32_s32(vld1q_s32(intptr + 28));
-                // _v0 = vmulq_f32(_v0, _scale0);
-                // _v1 = vmulq_f32(_v1, _scale1);
-                // _v2 = vmulq_f32(_v2, _scale0);
-                // _v3 = vmulq_f32(_v3, _scale1);
-                // _v4 = vmulq_f32(_v4, _scale0);
-                // _v5 = vmulq_f32(_v5, _scale1);
-                // _v6 = vmulq_f32(_v6, _scale0);
-                // _v7 = vmulq_f32(_v7, _scale1);
                 *(int64_t *)ptr = float2int8relu(_v01);
                 *(int64_t *)(ptr + 8) = float2int8relu(_v23);
                 *(int64_t *)(ptr + 16) = float2int8relu(_v45);
                 *(int64_t *)(ptr + 24) = float2int8relu(_v67);
-
-                // vst1_s8(ptr, float2int8relu(_v0, _v1));
-                // vst1_s8(ptr + 8, float2int8relu(_v2, _v3));
-                // vst1_s8(ptr + 16, float2int8relu(_v4, _v5));
-                // vst1_s8(ptr + 24, float2int8relu(_v6, _v7));
 
                 intptr += 32;
                 ptr += 32;
@@ -103,17 +74,6 @@ static void requantize_relu_pack8_rvv(const Mat& bottom_blob, Mat& top_blob, con
 
                 *(int64_t *)ptr = float2int8relu(_v01);
                 *(int64_t *)(ptr + 8) = float2int8relu(_v23);
-                // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
-                // float32x4_t _v2 = vcvtq_f32_s32(vld1q_s32(intptr + 8));
-                // float32x4_t _v3 = vcvtq_f32_s32(vld1q_s32(intptr + 12));
-                // _v0 = vmulq_f32(_v0, _scale0);
-                // _v1 = vmulq_f32(_v1, _scale1);
-                // _v2 = vmulq_f32(_v2, _scale0);
-                // _v3 = vmulq_f32(_v3, _scale1);
-                // vst1_s8(ptr, float2int8relu(_v0, _v1));
-                // vst1_s8(ptr + 8, float2int8relu(_v2, _v3));
-
                 intptr += 16;
                 ptr += 16;
             }
@@ -124,11 +84,7 @@ static void requantize_relu_pack8_rvv(const Mat& bottom_blob, Mat& top_blob, con
                 _v01 = vfmul_vv_f32m2(_v01, _scale0, vl);
 
                 *(int64_t *)ptr = float2int8relu(_v01);
-                // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
-                // _v0 = vmulq_f32(_v0, _scale0);
-                // _v1 = vmulq_f32(_v1, _scale1);
-                // vst1_s8(ptr, float2int8relu(_v0, _v1));
+
                 intptr += 8;
                 ptr += 8;
             }
@@ -148,19 +104,6 @@ static void requantize_relu_pack8_rvv(const Mat& bottom_blob, Mat& top_blob, con
 
             vfloat32m2_t _scale0 = vfmul_vv_f32m2(_scale_in0, _scale_out0, vl);
             _bias0 = vfmul_vv_f32m2(_bias0, _scale_out0, vl);
-
-            // float32x4_t _scale_in0 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + q * 8);
-            // float32x4_t _scale_in1 = scale_in_data_size == 1 ? vdupq_n_f32(scale_in_data[0]) : vld1q_f32((const float*)scale_in_data + q * 8 + 4);
-            // float32x4_t _scale_out0 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + q * 8);
-            // float32x4_t _scale_out1 = scale_out_data_size == 1 ? vdupq_n_f32(scale_out_data[0]) : vld1q_f32((const float*)scale_out_data + q * 8 + 4);
-            // float32x4_t _bias0 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + q * 8);
-            // float32x4_t _bias1 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + q * 8 + 4);
-
-            // float32x4_t _scale0 = vmulq_f32(_scale_in0, _scale_out0);
-            // float32x4_t _scale1 = vmulq_f32(_scale_in1, _scale_out1);
-            // _bias0 = vmulq_f32(_bias0, _scale_out0);
-            // _bias1 = vmulq_f32(_bias1, _scale_out1);
-
             int i = 0;
             for (; i + 3 < size; i += 4)
             {
@@ -178,28 +121,6 @@ static void requantize_relu_pack8_rvv(const Mat& bottom_blob, Mat& top_blob, con
                 *(int64_t *)(ptr + 8) = float2int8relu(_v23);
                 *(int64_t *)(ptr + 16) = float2int8relu(_v45);
                 *(int64_t *)(ptr + 24) = float2int8relu(_v67);
-                // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
-                // float32x4_t _v2 = vcvtq_f32_s32(vld1q_s32(intptr + 8));
-                // float32x4_t _v3 = vcvtq_f32_s32(vld1q_s32(intptr + 12));
-                // float32x4_t _v4 = vcvtq_f32_s32(vld1q_s32(intptr + 16));
-                // float32x4_t _v5 = vcvtq_f32_s32(vld1q_s32(intptr + 20));
-                // float32x4_t _v6 = vcvtq_f32_s32(vld1q_s32(intptr + 24));
-                // float32x4_t _v7 = vcvtq_f32_s32(vld1q_s32(intptr + 28));
-
-                // _v0 = vfmaq_f32(_bias0, _v0, _scale0);
-                // _v1 = vfmaq_f32(_bias1, _v1, _scale1);
-                // _v2 = vfmaq_f32(_bias0, _v2, _scale0);
-                // _v3 = vfmaq_f32(_bias1, _v3, _scale1);
-                // _v4 = vfmaq_f32(_bias0, _v4, _scale0);
-                // _v5 = vfmaq_f32(_bias1, _v5, _scale1);
-                // _v6 = vfmaq_f32(_bias0, _v6, _scale0);
-                // _v7 = vfmaq_f32(_bias1, _v7, _scale1);
-
-                // vst1_s8(ptr, float2int8relu(_v0, _v1));
-                // vst1_s8(ptr + 8, float2int8relu(_v2, _v3));
-                // vst1_s8(ptr + 16, float2int8relu(_v4, _v5));
-                // vst1_s8(ptr + 24, float2int8relu(_v6, _v7));
 
                 intptr += 32;
                 ptr += 32;
@@ -214,19 +135,6 @@ static void requantize_relu_pack8_rvv(const Mat& bottom_blob, Mat& top_blob, con
 
                 *(int64_t *)ptr = float2int8relu(_v01);
                 *(int64_t *)(ptr + 8) = float2int8relu(_v23);
-                // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
-                // float32x4_t _v2 = vcvtq_f32_s32(vld1q_s32(intptr + 8));
-                // float32x4_t _v3 = vcvtq_f32_s32(vld1q_s32(intptr + 12));
-
-                // _v0 = vfmaq_f32(_bias0, _v0, _scale0);
-                // _v1 = vfmaq_f32(_bias1, _v1, _scale1);
-                // _v2 = vfmaq_f32(_bias0, _v2, _scale0);
-                // _v3 = vfmaq_f32(_bias1, _v3, _scale1);
-
-
-                // vst1_s8(ptr, float2int8relu(_v0, _v1));
-                // vst1_s8(ptr + 8, float2int8relu(_v2, _v3));
 
                 intptr += 16;
                 ptr += 16;
@@ -238,13 +146,6 @@ static void requantize_relu_pack8_rvv(const Mat& bottom_blob, Mat& top_blob, con
                 _v01 = vfmacc_vv_f32m2(_bias0, _v01, _scale0, vl);
 
                 *(int64_t *)ptr = float2int8relu(_v01);
-                // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
-                // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
-
-                // _v0 = vfmaq_f32(_bias0, _v0, _scale0);
-                // _v1 = vfmaq_f32(_bias1, _v1, _scale1);
-
-                // vst1_s8(ptr, float2int8relu(_v0, _v1));
 
                 intptr += 8;
                 ptr += 8;

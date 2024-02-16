@@ -110,6 +110,70 @@ static inline int32_t float2int8(vfloat32m1_t _v)
     return _ret;
 }
 
+static inline int64_t float2int8(vfloat32m2_t _v)
+{
+    int vl = vsetvlmax_e32m2();
+    vint32m2_t _v32m2 = vfcvt_x_f_v_i32m2(_v, vl);
+    vint32m4_t _v32 = vundefined_i32m4();
+    _v32 = vset_v_i32m2_i32m4(_v32, 0, _v32m2);
+    vint16m2_t _v16 = vnclip_wx_i16m2(_v32, 0, vl);
+    vint8m1_t _v8 = vnclip_wx_i8m1(_v16, 0, vl);
+    _v8 = vmax_vx_i8m1(_v8, -127, vl);
+    int64_t _ret;
+    vse8_v_i8m1((int8_t*)&_ret, _v8, vl);
+    return _ret;
+}
+
+static inline int64_t float2int8relu(vfloat32m2_t _v)
+{
+    int vl = vsetvlmax_e32m2();
+    vint32m2_t _v32m2 = vfcvt_x_f_v_i32m2(_v, vl);
+    vint32m4_t _v32 = vundefined_i32m4();
+    _v32 = vset_v_i32m2_i32m4(_v32, 0, _v32m2);
+    vint16m2_t _v16 = vnclip_wx_i16m2(_v32, 0, vl);
+    vint8m1_t _v8 = vnclip_wx_i8m1(_v16, 0, vl);
+    _v8 = vmax_vx_i8m1(_v8, 0, vl);
+    int64_t _ret;
+    vse8_v_i8m1((int8_t*)&_ret, _v8, vl);
+    return _ret;
+}
+
+static inline int64_t float2int8leakyrelu(vfloat32m2_t _v, vfloat32m2_t _slope)
+{
+    int vl = vsetvlmax_e32m2();
+
+    vfloat32m2_t _v_leaky = vfmul_vv_f32m2(_v, _slope, vl);
+    vint32m2_t _v_int32 = vfcvt_x_f_v_i32m2(_v, vl);
+
+    // vfloat32m1_t _vlow_leaky = vfmul_vv_f32m1(_vlow, _slope, vl);
+    // vfloat32m1_t _vhigh_leaky = vfmul_vv_f32m1(_vhigh, _slope, vl);
+
+    // vint32m1_t _vlow32 = vfcvt_x_f_v_i32m1(_vlow, vl);
+    // vint32m1_t _vhigh32 = vfcvt_x_f_v_i32m1(_vhigh, vl);
+
+    // vint32m1_t _vlow32_leaky = vfcvt_x_f_v_i32m1(_vlow_leaky, vl);
+    // vint32m1_t _vhigh32_leaky = vfcvt_x_f_v_i32m1(_vhigh_leaky, vl);
+    vint32m2_t _v_int32_leaky = vfcvt_x_f_v_i32m2(_v_leaky, vl);
+
+    vl = 2 * vsetvlmax_e32m1();
+
+    vint32m4_t _v32 = vundefined_i32m4();
+    vint32m4_t _v32_leaky = vundefined_i32m4();
+    _v32 = vset_v_i32m2_i32m4(_v32, 0, _v_int32);
+    _v32_leaky = vset_v_i32m2_i32m4(_v32_leaky, 0, _v_int32_leaky);
+
+    vint16m2_t _v16 = vnclip_wx_i16m2(_v32, 0, vl);
+    vint16m2_t _v16_leaky = vnclip_wx_i16m2(_v32_leaky, 0, vl);
+
+    vint8m1_t _v8 = vnclip_wx_i8m1(_v16, 0, vl);
+    vint8m1_t _v8_leaky = vnclip_wx_i8m1(_v16_leaky, 0, vl);
+
+    _v8 = vmax_vv_i8m1(_v8, _v8_leaky, vl);
+    int64_t _ret;
+    vse8_v_i8m1((int8_t*)&_ret, _v8, vl);
+    return _ret;
+}
+
 static void print_vint8m1(vint8m1_t _v, int vl = 16)
 {
     int8_t* i8 = (int8_t*)malloc(16 * sizeof(int8_t));

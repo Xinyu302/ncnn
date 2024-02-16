@@ -1379,8 +1379,6 @@ int ConvolutionDepthWise_riscv::forward_int8(const Mat& bottom_blob, Mat& top_bl
                         {
                             vl = 8;
                             vint32m2_t _sum0 = vmv_v_x_i32m2(0, vl);
-                            // int32x4_t _sum0 = vdupq_n_s32(0);
-                            // int32x4_t _sum1 = vdupq_n_s32(0);
 
                             const signed char* sptr = m.row<const signed char>(i * stride_h) + j * stride_w * 8;
 
@@ -1390,54 +1388,27 @@ int ConvolutionDepthWise_riscv::forward_int8(const Mat& bottom_blob, Mat& top_bl
                                 vint8m1_t _w = vle8_v_i8m1(kptr + k * 8, vl);
                                 vint16m1_t _s0 = vget_v_i16m2_i16m1(vwmul_vv_i16m2(_val, _w, vl), 0);
 
-                                // int8x8_t _val = vld1_s8(sptr + space_ofs[k] * 8);
-                                // int8x8_t _w = vld1_s8(kptr + k * 8);
-                                // int16x8_t _s0 = vmull_s8(_val, _w);
-                                // _sum0 = vaddw_s16(_sum0, vget_low_s16(_s0));
-                                // _sum1 = vaddw_s16(_sum1, vget_high_s16(_s0));
                                 _sum0 = vwadd_wv_i32m2(_sum0, _s0, vl);
                             }
 
-                            // float32x4_t _scale_in0;
-                            // float32x4_t _scale_in1;
                             vfloat32m2_t _scale_in;
                             {
                                 vfloat32m2_t _bottom_blob_int8_scales = vle32_v_f32m2((const float*)bottom_blob_int8_scales + g * 8, vl);
                                 vfloat32m2_t _weight_data_int8_scales = vle32_v_f32m2((const float*)weight_data_int8_scales + g * 8, vl);
 
-                                // float32x4_t _bottom_blob_int8_scales0 = vld1q_f32((const float*)bottom_blob_int8_scales + g * 8);
-                                // float32x4_t _bottom_blob_int8_scales1 = vld1q_f32((const float*)bottom_blob_int8_scales + g * 8 + 4);
-                                // float32x4_t _weight_data_int8_scales0 = vld1q_f32((const float*)weight_data_int8_scales + g * 8);
-                                // float32x4_t _weight_data_int8_scales1 = vld1q_f32((const float*)weight_data_int8_scales + g * 8 + 4);
                                 _scale_in = vfdiv_vv_f32m2(vfmv_v_f_f32m2(1.f, vl), vfmul_vv_f32m2(_bottom_blob_int8_scales, _weight_data_int8_scales, vl), vl);
-                                // _scale_in0 = div_ps(vdupq_n_f32(1.f), vmulq_f32(_bottom_blob_int8_scales0, _weight_data_int8_scales0));
-                                // _scale_in1 = div_ps(vdupq_n_f32(1.f), vmulq_f32(_bottom_blob_int8_scales1, _weight_data_int8_scales1));
                                 vbool16_t _is_zero = vmfeq_vv_f32m2_b16(_bottom_blob_int8_scales, vfmv_v_f_f32m2(0.f, vl), vl);
                                 _scale_in = vfsub_vv_f32m2_m(_is_zero, _scale_in, _scale_in, _scale_in, vl);
-                                // uint32x4_t _m0 = vmvnq_u32(vceqq_f32(_weight_data_int8_scales0, vdupq_n_f32(0.f)));
-                                // uint32x4_t _m1 = vmvnq_u32(vceqq_f32(_weight_data_int8_scales1, vdupq_n_f32(0.f)));
-                                // _scale_in0 = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(_scale_in0), _m0));
-                                // _scale_in1 = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(_scale_in1), _m1));
                             }
 
                             vfloat32m2_t _sumfp32 = vfmul_vv_f32m2(vfcvt_f_x_v_f32m2(_sum0, vl), _scale_in, vl);
-
-                            // float32x4_t _sumfp32_0 = vmulq_f32(vcvtq_f32_s32(_sum0), _scale_in0);
-                            // float32x4_t _sumfp32_1 = vmulq_f32(vcvtq_f32_s32(_sum1), _scale_in1);
 
                             if (bias_term)
                             {
                                 vfloat32m2_t _bias = vle32_v_f32m2((const float*)bias_data + g * 8, vl);
                                 _sumfp32 = vfadd_vv_f32m2(_sumfp32, _bias, vl);
-                                // float32x4_t _bias0 = vld1q_f32((const float*)bias_data + g * 8);
-                                // float32x4_t _bias1 = vld1q_f32((const float*)bias_data + g * 8 + 4);
-                                // _sumfp32_0 = vaddq_f32(_sumfp32_0, _bias0);
-                                // _sumfp32_1 = vaddq_f32(_sumfp32_1, _bias1);
                             }
                             _sumfp32 = activation_ps(_sumfp32, activation_type, activation_params, vl);
-
-                            // _sumfp32_0 = activation_ps(_sumfp32_0, activation_type, activation_params);
-                            // _sumfp32_1 = activation_ps(_sumfp32_1, activation_type, activation_params);
 
                             if (use_int8_requantize)
                             {
@@ -1446,18 +1417,12 @@ int ConvolutionDepthWise_riscv::forward_int8(const Mat& bottom_blob, Mat& top_bl
                                 vfloat32m2_t _res = vfmul_vv_f32m2(_sumfp32, _scale_out, vl);
                                 int64_t _sum8 = float2int8(vget_v_f32m2_f32m1(_res, 0), vget_v_f32m2_f32m1(_res, 1));
                                 *(int64_t*)outptr_s8 = _sum8;
-                                // float32x4_t _scale_out0 = vld1q_f32((const float*)top_blob_int8_scales + g * 8);
-                                // float32x4_t _scale_out1 = vld1q_f32((const float*)top_blob_int8_scales + g * 8 + 4);
-                                // int8x8_t _sum8 = float2int8(vmulq_f32(_sumfp32_0, _scale_out0), vmulq_f32(_sumfp32_1, _scale_out1));
-                                // vst1_s8(outptr_s8, _sum8);
                                 outptr_s8 += 8;
                             }
                             else
                             {
                                 // dequantize
                                 vse32_v_f32m2(outptr_f32, _sumfp32, vl);
-                                // vst1q_f32(outptr_f32, _sumfp32_0);
-                                // vst1q_f32(outptr_f32 + 4, _sumfp32_1);
                                 outptr_f32 += 8;
                             }
                         }

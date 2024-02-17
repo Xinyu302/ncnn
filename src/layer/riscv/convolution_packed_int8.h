@@ -368,14 +368,14 @@ static void convolution_transform_kernel_packed_int8(const Mat& kernel, Mat& ker
 
 static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const Mat& weight_data_tm, int kernel_w, int kernel_h, int dilation_w, int dilation_h, int stride_w, int stride_h, const Option& opt)
 {
-// #if !(__ARM_FEATURE_MATMUL_INT8 || __ARM_FEATURE_DOTPROD)
-// #if NCNN_RUNTIME_CPU && NCNN_ARM84I8MM && __aarch64__ && !__ARM_FEATURE_MATMUL_INT8
-//     if (ncnn::cpu_support_arm_i8mm())
-//     {
-//         convolution_packed_int8_i8mm(bottom_blob, top_blob, weight_data_tm, kernel_w, kernel_h, dilation_w, dilation_h, stride_w, stride_h, opt);
-//         return;
-//     }
-// #endif
+    // #if !(__ARM_FEATURE_MATMUL_INT8 || __ARM_FEATURE_DOTPROD)
+    // #if NCNN_RUNTIME_CPU && NCNN_ARM84I8MM && __aarch64__ && !__ARM_FEATURE_MATMUL_INT8
+    //     if (ncnn::cpu_support_arm_i8mm())
+    //     {
+    //         convolution_packed_int8_i8mm(bottom_blob, top_blob, weight_data_tm, kernel_w, kernel_h, dilation_w, dilation_h, stride_w, stride_h, opt);
+    //         return;
+    //     }
+    // #endif
 
 // #if NCNN_RUNTIME_CPU && NCNN_ARM82DOT && __aarch64__ && !__ARM_FEATURE_DOTPROD
 //     if (ncnn::cpu_support_arm_asimddp())

@@ -608,60 +608,67 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
             const signed char* kptr = weight_data_tm.channel(p / 8);
 
             int q = 0;
-            // {
-            //     for (; q + 7 < inch; q += 8)
-            //     {
-            //         const signed char* r0 = bottom_blob.channel(q / elempack).row<const signed char>(i * stride_h) + j * stride_w * elempack;
+            {
+                for (; q + 7 < inch; q += 8)
+                {
+                    const signed char* r0 = bottom_blob.channel(q / elempack).row<const signed char>(i * stride_h) + j * stride_w * elempack;
 
-            //         for (int k = 0; k < maxk; k++)
-            //         {
-            //             const signed char* r0s = r0 + space_ofs[k];
+                    for (int k = 0; k < maxk; k++)
+                    {
+                        const signed char* r0s = r0 + space_ofs[k];
 
-            //             int8x8_t _r0;
-            //             if (elempack == 8)
-            //             {
-            //                 _r0 = vld1_s8(r0s);
-            //             }
-            //             else // if (elempack == 1)
-            //             {
-            //                 signed char tmp[8] = {r0s[0], r0s[N], r0s[N * 2], r0s[N * 3], r0s[N * 4], r0s[N * 5], r0s[N * 6], r0s[N * 7]};
-            //                 _r0 = vld1_s8(tmp);
-            //             }
+                        // int8x8_t _r0;
+                        vint8m1_t _r0;
+                        if (elempack == 8)
+                        {
+                            _r0 = vle8_v_i8m1(r0s, vl);`
+                            // _r0 = vld1_s8(r0s);
+                        }
+                        else // if (elempack == 1)
+                        {
+                            _r0 = vlse8_v_i8m1(r0s, N * sizeof(signed char), vl);
+                            // signed char tmp[8] = {r0s[0], r0s[N], r0s[N * 2], r0s[N * 3], r0s[N * 4], r0s[N * 5], r0s[N * 6], r0s[N * 7]};
+                            // _r0 = vld1_s8(tmp);
+                        }
 
-            //             int8x16_t _w0 = vld1q_s8(kptr);
-            //             int8x16_t _w1 = vld1q_s8(kptr + 16);
-            //             int8x16_t _w2 = vld1q_s8(kptr + 32);
-            //             int8x16_t _w3 = vld1q_s8(kptr + 48);
+                        
+                        // int8x16_t _w0 = vld1q_s8(kptr);
+                        // int8x16_t _w1 = vld1q_s8(kptr + 16);
+                        // int8x16_t _w2 = vld1q_s8(kptr + 32);
+                        // int8x16_t _w3 = vld1q_s8(kptr + 48);
 
-            //             int16x4_t _rr0 = vreinterpret_s16_s8(_r0);
-            //             int8x8_t _r0ll = vreinterpret_s8_s16(vdup_lane_s16(_rr0, 0));
-            //             int8x8_t _r0lh = vreinterpret_s8_s16(vdup_lane_s16(_rr0, 1));
-            //             int8x8_t _r0hl = vreinterpret_s8_s16(vdup_lane_s16(_rr0, 2));
-            //             int8x8_t _r0hh = vreinterpret_s8_s16(vdup_lane_s16(_rr0, 3));
+                        // int16x4_t _rr0 = vreinterpret_s16_s8(_r0);
 
-            //             int16x8_t _s0l = vmull_s8(_r0ll, vget_low_s8(_w0));
-            //             int16x8_t _s1l = vmull_s8(_r0ll, vget_high_s8(_w0));
-            //             int16x8_t _s0h = vmull_s8(_r0lh, vget_low_s8(_w1));
-            //             int16x8_t _s1h = vmull_s8(_r0lh, vget_high_s8(_w1));
-            //             _s0l = vmlal_s8(_s0l, _r0hl, vget_low_s8(_w2));
-            //             _s1l = vmlal_s8(_s1l, _r0hl, vget_high_s8(_w2));
-            //             _s0h = vmlal_s8(_s0h, _r0hh, vget_low_s8(_w3));
-            //             _s1h = vmlal_s8(_s1h, _r0hh, vget_high_s8(_w3));
+                        
 
-            //             _sum0 = vpadalq_s16(_sum0, _s0l);
-            //             _sum1 = vpadalq_s16(_sum1, _s1l);
-            //             _sum2 = vpadalq_s16(_sum2, _s0h);
-            //             _sum3 = vpadalq_s16(_sum3, _s1h);
+                        int8x8_t _r0ll = vreinterpret_s8_s16(vdup_lane_s16(_rr0, 0));
+                        int8x8_t _r0lh = vreinterpret_s8_s16(vdup_lane_s16(_rr0, 1));
+                        int8x8_t _r0hl = vreinterpret_s8_s16(vdup_lane_s16(_rr0, 2));
+                        int8x8_t _r0hh = vreinterpret_s8_s16(vdup_lane_s16(_rr0, 3));
 
-            //             kptr += 64;
-            //         }
-            //     }
+                        int16x8_t _s0l = vmull_s8(_r0ll, vget_low_s8(_w0));
+                        int16x8_t _s1l = vmull_s8(_r0ll, vget_high_s8(_w0));
+                        int16x8_t _s0h = vmull_s8(_r0lh, vget_low_s8(_w1));
+                        int16x8_t _s1h = vmull_s8(_r0lh, vget_high_s8(_w1));
+                        _s0l = vmlal_s8(_s0l, _r0hl, vget_low_s8(_w2));
+                        _s1l = vmlal_s8(_s1l, _r0hl, vget_high_s8(_w2));
+                        _s0h = vmlal_s8(_s0h, _r0hh, vget_low_s8(_w3));
+                        _s1h = vmlal_s8(_s1h, _r0hh, vget_high_s8(_w3));
 
-            //     {
-            //         _sum0 = vaddq_s32(_sum0, _sum2);
-            //         _sum1 = vaddq_s32(_sum1, _sum3);
-            //     }
-            // }
+                        _sum0 = vpadalq_s16(_sum0, _s0l);
+                        _sum1 = vpadalq_s16(_sum1, _s1l);
+                        _sum2 = vpadalq_s16(_sum2, _s0h);
+                        _sum3 = vpadalq_s16(_sum3, _s1h);
+
+                        kptr += 64;
+                    }
+                }
+
+                {
+                    _sum0 = vaddq_s32(_sum0, _sum2);
+                    _sum1 = vaddq_s32(_sum1, _sum3);
+                }
+            }
             for (; q < inch; q++)
             {
                 const signed char* r0 = bottom_blob.channel(q).row<const signed char>(i * stride_h) + j * stride_w;

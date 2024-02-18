@@ -484,7 +484,6 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
                         // uint8_t mask[8] = {8, 9, 10, 11, 12, 13, 14, 15};
                         // vuint8m1_t _index = vle8_v_u8m1(mask, vl);
 
-
                         // int8x8_t _r0ll = vreinterpret_s8_s16(vdup_lane_s16(_rr0, 0));
                         // int8x8_t _r0lh = vreinterpret_s8_s16(vdup_lane_s16(_rr0, 1));
                         // int8x8_t _r0hl = vreinterpret_s8_s16(vdup_lane_s16(_rr0, 2));
@@ -504,12 +503,12 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
                         // vint16m1_t _s1l = vget_v_i16m2_i16m2(vwmacc_vv_i16m2(_s1l_m2, _r0hl, vrgather_vv_i8m1(_w2, _index, vl), vl), 0);
                         // vint16m1_t _s2l = vget_v_i16m2_i16m2(vwmacc_vv_i16m2(_s0h_m2, _r0hh, _w3, vl), 0);
                         // vint16m1_t _s3l = vget_v_i16m2_i16m2(vwmacc_vv_i16m2(_s1h_m2, _r0hh, vrgather_vv_i8m1(_w3, _index, vl), vl), 0);
-                    
+
                         _s0l_m2 = vwmacc_vv_i16m2(_s0l_m2, _r0hl, _w2, vl);
                         _s1l_m2 = vwmacc_vv_i16m2(_s1l_m2, _r0hl, vslidedown_vx_i8m1(_w2, _w2, 8, vl), vl);
                         _s0h_m2 = vwmacc_vv_i16m2(_s0h_m2, _r0hh, _w3, vl);
                         _s1h_m2 = vwmacc_vv_i16m2(_s1h_m2, _r0hh, vslidedown_vx_i8m1(_w3, _w3, 8, vl), vl);
-                        
+
                         // _s0l = vmlal_s8(_s0l, _r0hl, vget_low_s8(_w2));
                         // _s1l = vmlal_s8(_s1l, _r0hl, vget_high_s8(_w2));
                         // _s0h = vmlal_s8(_s0h, _r0hh, vget_low_s8(_w3));
@@ -669,14 +668,13 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
                         vint8m1_t _r0hl = vreinterpret_v_i16m1_i8m1(vrgather_vx_i16m1(_rr0, 2, vl));
                         vint8m1_t _r0hh = vreinterpret_v_i16m1_i8m1(vrgather_vx_i16m1(_rr0, 3, vl));
 
-                        vint16m2_t _sl_m2 = vwmul_vv_i16m2(_r0ll, _w0, vl); 
+                        vint16m2_t _sl_m2 = vwmul_vv_i16m2(_r0ll, _w0, vl);
                         vint16m2_t _sh_m2 = vwmul_vv_i16m2(_r0lh, vslidedown_vx_i8m1(_w0, _w0, 8, vl), vl);
                         _sl_m2 = vwmacc_vv_i16m2(_sl_m2, _r0hl, _w1, vl);
                         _sh_m2 = vwmacc_vv_i16m2(_sh_m2, _r0hh, vslidedown_vx_i8m1(_w1, _w1, 8, vl), vl);
 
                         vint16m1_t _sl = vget_v_i16m2_i16m1(_sl_m2, 0);
                         vint16m1_t _sh = vget_v_i16m2_i16m1(_sh_m2, 0);
-
 
                         // int8x8_t _r0ll = vreinterpret_s8_s16(vdup_lane_s16(_rr0, 0));
                         // int8x8_t _r0lh = vreinterpret_s8_s16(vdup_lane_s16(_rr0, 1));
@@ -701,7 +699,6 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
 
                         // _sum0 = vpadalq_s16(_sum0, _sl);
                         // _sum1 = vpadalq_s16(_sum1, _sh);
-                        
 
                         kptr += 32;
                     }
@@ -893,7 +890,7 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
         int* outptr = top_blob.channel(p);
 
         int ij = 0;
-        
+
         for (; ij < outw * outh; ij++)
         {
             const int i = ij / outw;

@@ -26,24 +26,6 @@
 
 static void convolution_transform_kernel_packed_int8(const Mat& kernel, Mat& kernel_tm, int inch, int outch, int kernel_w, int kernel_h)
 {
-    // #if !(__ARM_FEATURE_MATMUL_INT8 || __ARM_FEATURE_DOTPROD)
-    // #if NCNN_RUNTIME_CPU && NCNN_ARM84I8MM && __aarch64__ && !__ARM_FEATURE_MATMUL_INT8
-    //     if (ncnn::cpu_support_arm_i8mm())
-    //     {
-    //         convolution_transform_kernel_packed_int8_i8mm(kernel, kernel_tm, inch, outch, kernel_w, kernel_h);
-    //         return;
-    //     }
-    // #endif
-
-    // #if NCNN_RUNTIME_CPU && NCNN_ARM82DOT && __aarch64__ && !__ARM_FEATURE_DOTPROD
-    //     if (ncnn::cpu_support_arm_asimddp())
-    //     {
-    //         convolution_transform_kernel_packed_int8_asimddp(kernel, kernel_tm, inch, outch, kernel_w, kernel_h);
-    //         return;
-    //     }
-    // #endif
-    // #endif
-
     const int maxk = kernel_w * kernel_h;
 
     // src = kw-kh-inch-outch
@@ -437,162 +419,7 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
         int* outptr = top_blob.channel(p / out_elempack);
 
         int ij = 0;
-        // for (; ij + 1 < outw * outh; ij += 2)
-        // {
-        //     const int i0 = ij / outw;
-        //     const int i1 = (ij + 1) / outw;
-        //     const int j0 = ij % outw;
-        //     const int j1 = (ij + 1) % outw;
-        //     // vl = 4;
 
-        //     int32x4_t _sum0 = vdupq_n_s32(0);
-        //     int32x4_t _sum1 = vdupq_n_s32(0);
-        //     int32x4_t _sum2 = vdupq_n_s32(0);
-        //     int32x4_t _sum3 = vdupq_n_s32(0);
-
-        //     const signed char* kptr = weight_data_tm.channel(p / 8);
-
-        //     int q = 0;
-        //     {
-        //         for (; q + 7 < inch; q += 8)
-        //         {
-        //             const signed char* r0 = bottom_blob.channel(q / elempack).row<const signed char>(i0 * stride_h) + j0 * stride_w * elempack;
-        //             const signed char* r1 = bottom_blob.channel(q / elempack).row<const signed char>(i1 * stride_h) + j1 * stride_w * elempack;
-
-        //             for (int k = 0; k < maxk; k++)
-        //             {
-        //                 const signed char* r0s = r0 + space_ofs[k];
-        //                 const signed char* r1s = r1 + space_ofs[k];
-
-        //                 int8x8_t _r0;
-        //                 int8x8_t _r1;
-        //                 if (elempack == 8)
-        //                 {
-        //                     _r0 = vld1_s8(r0s);
-        //                     _r1 = vld1_s8(r1s);
-        //                 }
-        //                 else // if (elempack == 1)
-        //                 {
-        //                     signed char tmp0[8] = {r0s[0], r0s[N], r0s[N * 2], r0s[N * 3], r0s[N * 4], r0s[N * 5], r0s[N * 6], r0s[N * 7]};
-        //                     signed char tmp1[8] = {r1s[0], r1s[N], r1s[N * 2], r1s[N * 3], r1s[N * 4], r1s[N * 5], r1s[N * 6], r1s[N * 7]};
-        //                     _r0 = vld1_s8(tmp0);
-        //                     _r1 = vld1_s8(tmp1);
-        //                 }
-
-        //                 int8x16_t _w0 = vld1q_s8(kptr);
-        //                 int8x16_t _w1 = vld1q_s8(kptr + 16);
-        //                 int8x16_t _w2 = vld1q_s8(kptr + 32);
-        //                 int8x16_t _w3 = vld1q_s8(kptr + 48);
-
-        //                 int16x4_t _rr0 = vreinterpret_s16_s8(_r0);
-        //                 int16x4_t _rr1 = vreinterpret_s16_s8(_r1);
-
-        //                 int8x8_t _r0ll = vreinterpret_s8_s16(vdup_lane_s16(_rr0, 0));
-        //                 int8x8_t _r1ll = vreinterpret_s8_s16(vdup_lane_s16(_rr1, 0));
-        //                 int8x8_t _r0hl = vreinterpret_s8_s16(vdup_lane_s16(_rr0, 2));
-        //                 int8x8_t _r1hl = vreinterpret_s8_s16(vdup_lane_s16(_rr1, 2));
-
-        //                 int16x8_t _s0l = vmull_s8(_r0ll, vget_low_s8(_w0));
-        //                 int16x8_t _s1l = vmull_s8(_r0ll, vget_high_s8(_w0));
-        //                 int16x8_t _s2l = vmull_s8(_r1ll, vget_low_s8(_w0));
-        //                 int16x8_t _s3l = vmull_s8(_r1ll, vget_high_s8(_w0));
-        //                 _s0l = vmlal_s8(_s0l, _r0hl, vget_low_s8(_w2));
-        //                 _s1l = vmlal_s8(_s1l, _r0hl, vget_high_s8(_w2));
-        //                 _s2l = vmlal_s8(_s2l, _r1hl, vget_low_s8(_w2));
-        //                 _s3l = vmlal_s8(_s3l, _r1hl, vget_high_s8(_w2));
-
-        //                 _sum0 = vpadalq_s16(_sum0, _s0l);
-        //                 _sum1 = vpadalq_s16(_sum1, _s1l);
-        //                 _sum2 = vpadalq_s16(_sum2, _s2l);
-        //                 _sum3 = vpadalq_s16(_sum3, _s3l);
-
-        //                 int8x8_t _r0lh = vreinterpret_s8_s16(vdup_lane_s16(_rr0, 1));
-        //                 int8x8_t _r1lh = vreinterpret_s8_s16(vdup_lane_s16(_rr1, 1));
-        //                 int8x8_t _r0hh = vreinterpret_s8_s16(vdup_lane_s16(_rr0, 3));
-        //                 int8x8_t _r1hh = vreinterpret_s8_s16(vdup_lane_s16(_rr1, 3));
-
-        //                 int16x8_t _s0h = vmull_s8(_r0lh, vget_low_s8(_w1));
-        //                 int16x8_t _s1h = vmull_s8(_r0lh, vget_high_s8(_w1));
-        //                 int16x8_t _s2h = vmull_s8(_r1lh, vget_low_s8(_w1));
-        //                 int16x8_t _s3h = vmull_s8(_r1lh, vget_high_s8(_w1));
-        //                 _s0h = vmlal_s8(_s0h, _r0hh, vget_low_s8(_w3));
-        //                 _s1h = vmlal_s8(_s1h, _r0hh, vget_high_s8(_w3));
-        //                 _s2h = vmlal_s8(_s2h, _r1hh, vget_low_s8(_w3));
-        //                 _s3h = vmlal_s8(_s3h, _r1hh, vget_high_s8(_w3));
-
-        //                 _sum0 = vpadalq_s16(_sum0, _s0h);
-        //                 _sum1 = vpadalq_s16(_sum1, _s1h);
-        //                 _sum2 = vpadalq_s16(_sum2, _s2h);
-        //                 _sum3 = vpadalq_s16(_sum3, _s3h);
-
-        //                 kptr += 64;
-        //             }
-        //         }
-        //     }
-        //     for (; q < inch; q++)
-        //     {
-        //         const signed char* r0 = bottom_blob.channel(q).row<const signed char>(i0 * stride_h) + j0 * stride_w;
-        //         const signed char* r1 = bottom_blob.channel(q).row<const signed char>(i1 * stride_h) + j1 * stride_w;
-
-        //         for (int k = 0; k < maxk; k++)
-        //         {
-        //             const signed char* r0s = r0 + space_ofs[k];
-        //             const signed char* r1s = r1 + space_ofs[k];
-
-        //             // if (elempack == 1)
-        //             {
-        //                 int8x8_t _r0 = vdup_n_s8(r0s[0]);
-        //                 int8x8_t _r1 = vdup_n_s8(r1s[0]);
-        //                 int8x8_t _w = vld1_s8(kptr);
-        //                 int16x8_t _s0 = vmull_s8(_r0, _w);
-        //                 int16x8_t _s1 = vmull_s8(_r1, _w);
-        //                 _sum0 = vaddw_s16(_sum0, vget_low_s16(_s0));
-        //                 _sum1 = vaddw_s16(_sum1, vget_high_s16(_s0));
-        //                 _sum2 = vaddw_s16(_sum2, vget_low_s16(_s1));
-        //                 _sum3 = vaddw_s16(_sum3, vget_high_s16(_s1));
-
-        //                 kptr += 8;
-        //             }
-        //         }
-        //     }
-
-        //     if (out_elempack == 8)
-        //     {
-        //         vst1q_s32(outptr, _sum0);
-        //         vst1q_s32(outptr + 4, _sum1);
-        //         vst1q_s32(outptr + 8, _sum2);
-        //         vst1q_s32(outptr + 12, _sum3);
-        //         outptr += 16;
-        //     }
-        //     if (out_elempack == 4)
-        //     {
-        //         vst1q_s32(outptr, _sum0);
-        //         vst1q_s32(outptr + 4, _sum2);
-        //         vst1q_s32(outptr + M, _sum1);
-        //         vst1q_s32(outptr + M + 4, _sum3);
-        //         outptr += 8;
-        //     }
-        //     if (out_elempack == 1)
-        //     {
-        //         outptr[0] = vgetq_lane_s32(_sum0, 0);
-        //         outptr[1] = vgetq_lane_s32(_sum2, 0);
-        //         outptr[M] = vgetq_lane_s32(_sum0, 1);
-        //         outptr[M + 1] = vgetq_lane_s32(_sum2, 1);
-        //         outptr[M * 2] = vgetq_lane_s32(_sum0, 2);
-        //         outptr[M * 2 + 1] = vgetq_lane_s32(_sum2, 2);
-        //         outptr[M * 3] = vgetq_lane_s32(_sum0, 3);
-        //         outptr[M * 3 + 1] = vgetq_lane_s32(_sum2, 3);
-        //         outptr[M * 4] = vgetq_lane_s32(_sum1, 0);
-        //         outptr[M * 4 + 1] = vgetq_lane_s32(_sum3, 0);
-        //         outptr[M * 5] = vgetq_lane_s32(_sum1, 1);
-        //         outptr[M * 5 + 1] = vgetq_lane_s32(_sum3, 1);
-        //         outptr[M * 6] = vgetq_lane_s32(_sum1, 2);
-        //         outptr[M * 6 + 1] = vgetq_lane_s32(_sum3, 2);
-        //         outptr[M * 7] = vgetq_lane_s32(_sum1, 3);
-        //         outptr[M * 7 + 1] = vgetq_lane_s32(_sum3, 3);
-        //         outptr += 2;
-        //     }
-        // }
         for (; ij < outw * outh; ij++)
         {
             const int i = ij / outw;
@@ -605,7 +432,7 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
 
             vl = 8;
             vint32m2_t _sum01 = vmv_v_x_i32m2(0, vl);
-            vint32m2_t _sum23 = vmv_v_x_i32m2(0, vl);
+            // vint32m2_t _sum23 = vmv_v_x_i32m2(0, vl);
 
             const signed char* kptr = weight_data_tm.channel(p / 8);
 
@@ -680,7 +507,7 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
                         _s0l_m2 = vwmacc_vv_i16m2(_s0l_m2, _r0hl, _w2, vl);
                         _s1l_m2 = vwmacc_vv_i16m2(_s1l_m2, _r0hl, vslidedown_vx_i8m1(_w2, _w2, 8, vl), vl);
                         _s0h_m2 = vwmacc_vv_i16m2(_s0h_m2, _r0hh, _w3, vl);
-                        _s1h_m2 = vwmacc_vv_i16m2(_s1h_m2, _r0hh, vslidedown_vx_i8m1(_w3, _w2, 8, vl), vl);
+                        _s1h_m2 = vwmacc_vv_i16m2(_s1h_m2, _r0hh, vslidedown_vx_i8m1(_w3, _w3, 8, vl), vl);
                         
                         // _s0l = vmlal_s8(_s0l, _r0hl, vget_low_s8(_w2));
                         // _s1l = vmlal_s8(_s1l, _r0hl, vget_high_s8(_w2));
@@ -716,6 +543,7 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
             }
             for (; q < inch; q++)
             {
+                vl = 8;
                 const signed char* r0 = bottom_blob.channel(q).row<const signed char>(i * stride_h) + j * stride_w;
 
                 for (int k = 0; k < maxk; k++)
@@ -738,6 +566,7 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
                     }
                 }
             }
+            vl = 8;
 
             if (out_elempack == 8)
             {
@@ -753,7 +582,6 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
                 vl = 4;
                 vse32_v_i32m1(outptr, vget_v_i32m2_i32m1(_sum01, 0), vl);
                 vse32_v_i32m1(outptr + M, vget_v_i32m2_i32m1(_sum01, 1), vl);
-                vl = 8;
                 outptr += 4;
             }
             if (out_elempack == 1)
@@ -786,130 +614,7 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
         int* outptr = top_blob.channel(p / out_elempack);
 
         int ij = 0;
-        // for (; ij + 1 < outw * outh; ij += 2)
-        // {
-        //     const int i0 = ij / outw;
-        //     const int i1 = (ij + 1) / outw;
-        //     const int j0 = ij % outw;
-        //     const int j1 = (ij + 1) % outw;
 
-        //     vint32m2_t _sum01 = vmv_v_x_i32m2(0, vl);
-        //     int32x4_t _sum0 = vdupq_n_s32(0);
-        //     int32x4_t _sum1 = vdupq_n_s32(0);
-
-        //     const signed char* kptr = weight_data_tm.channel(p / 8 + (p % 8) / 4);
-
-        //     int q = 0;
-        //     {
-        //         for (; q + 7 < inch; q += 8)
-        //         {
-        //             const signed char* r0 = bottom_blob.channel(q / elempack).row<const signed char>(i0 * stride_h) + j0 * stride_w * elempack;
-        //             const signed char* r1 = bottom_blob.channel(q / elempack).row<const signed char>(i1 * stride_h) + j1 * stride_w * elempack;
-
-        //             for (int k = 0; k < maxk; k++)
-        //             {
-        //                 const signed char* r0s = r0 + space_ofs[k];
-        //                 const signed char* r1s = r1 + space_ofs[k];
-
-        //                 int8x8_t _r0;
-        //                 int8x8_t _r1;
-        //                 if (elempack == 8)
-        //                 {
-        //                     _r0 = vld1_s8(r0s);
-        //                     _r1 = vld1_s8(r1s);
-        //                 }
-        //                 else // if (elempack == 1)
-        //                 {
-        //                     signed char tmp0[8] = {r0s[0], r0s[N], r0s[N * 2], r0s[N * 3], r0s[N * 4], r0s[N * 5], r0s[N * 6], r0s[N * 7]};
-        //                     signed char tmp1[8] = {r1s[0], r1s[N], r1s[N * 2], r1s[N * 3], r1s[N * 4], r1s[N * 5], r1s[N * 6], r1s[N * 7]};
-        //                     _r0 = vld1_s8(tmp0);
-        //                     _r1 = vld1_s8(tmp1);
-        //                 }
-
-        //                 int8x16_t _w0 = vld1q_s8(kptr);
-        //                 int8x16_t _w1 = vld1q_s8(kptr + 16);
-
-        //                 int16x4_t _rr0 = vreinterpret_s16_s8(_r0);
-        //                 int16x4_t _rr1 = vreinterpret_s16_s8(_r1);
-
-        //                 int8x8_t _r0ll = vreinterpret_s8_s16(vdup_lane_s16(_rr0, 0));
-        //                 int8x8_t _r1ll = vreinterpret_s8_s16(vdup_lane_s16(_rr1, 0));
-        //                 int8x8_t _r0lh = vreinterpret_s8_s16(vdup_lane_s16(_rr0, 1));
-        //                 int8x8_t _r1lh = vreinterpret_s8_s16(vdup_lane_s16(_rr1, 1));
-
-        //                 int16x8_t _s0l = vmull_s8(_r0ll, vget_low_s8(_w0));
-        //                 int16x8_t _s1l = vmull_s8(_r1ll, vget_low_s8(_w0));
-        //                 int16x8_t _s0h = vmull_s8(_r0lh, vget_high_s8(_w0));
-        //                 int16x8_t _s1h = vmull_s8(_r1lh, vget_high_s8(_w0));
-
-        //                 int8x8_t _r0hl = vreinterpret_s8_s16(vdup_lane_s16(_rr0, 2));
-        //                 int8x8_t _r1hl = vreinterpret_s8_s16(vdup_lane_s16(_rr1, 2));
-        //                 int8x8_t _r0hh = vreinterpret_s8_s16(vdup_lane_s16(_rr0, 3));
-        //                 int8x8_t _r1hh = vreinterpret_s8_s16(vdup_lane_s16(_rr1, 3));
-
-        //                 _s0l = vmlal_s8(_s0l, _r0hl, vget_low_s8(_w1));
-        //                 _s1l = vmlal_s8(_s1l, _r1hl, vget_low_s8(_w1));
-        //                 _s0h = vmlal_s8(_s0h, _r0hh, vget_high_s8(_w1));
-        //                 _s1h = vmlal_s8(_s1h, _r1hh, vget_high_s8(_w1));
-
-        //                 _sum0 = vpadalq_s16(_sum0, _s0l);
-        //                 _sum1 = vpadalq_s16(_sum1, _s1l);
-        //                 _sum0 = vpadalq_s16(_sum0, _s0h);
-        //                 _sum1 = vpadalq_s16(_sum1, _s1h);
-
-        //                 kptr += 32;
-        //             }
-        //         }
-        //     }
-        //     for (; q < inch; q++)
-        //     {
-        //         const signed char* r0 = bottom_blob.channel(q).row<const signed char>(i0 * stride_h) + j0 * stride_w;
-        //         const signed char* r1 = bottom_blob.channel(q).row<const signed char>(i1 * stride_h) + j1 * stride_w;
-
-        //         for (int k = 0; k < maxk; k++)
-        //         {
-        //             const signed char* r0s = r0 + space_ofs[k];
-        //             const signed char* r1s = r1 + space_ofs[k];
-
-        //             // if (elempack == 1)
-        //             {
-        //                 vint8m1_t _r0 = vmv_v_x_i8m1(r0s[0], vl);
-        //                 vint8m1_t _r1 = vmv_v_x_i8m1(r1s[0], vl);
-
-        //                 // vint32m4_t _r01_int32 = vundefined_i32m4();
-
-        //                 // int8x8_t _r0 = vdup_n_s8(r0s[0]);
-        //                 // int8x8_t _r1 = vdup_n_s8(r1s[0]);
-        //                 int8x8_t _r01 = vreinterpret_s8_s32(vzip_s32(vreinterpret_s32_s8(_r0), vreinterpret_s32_s8(_r1)).val[0]);
-        //                 int8x8_t _w = vld1_s8(kptr);
-        //                 int8x8_t _ww = vreinterpret_s8_s32(vzip_s32(vreinterpret_s32_s8(_w), vreinterpret_s32_s8(_w)).val[0]);
-        //                 int16x8_t _s01 = vmull_s8(_r01, _ww);
-        //                 _sum0 = vaddw_s16(_sum0, vget_low_s16(_s01));
-        //                 _sum1 = vaddw_s16(_sum1, vget_high_s16(_s01));
-
-        //                 kptr += 4;
-        //             }
-        //         }
-        //     }
-
-        //     if (out_elempack == 4)
-        //     {
-        //         vse32_v_i32m2(outptr, _sum01, vl);
-        //         // vst1q_s32(outptr, _sum0);
-        //         // vst1q_s32(outptr + 4, _sum1);
-        //         outptr += 8;
-        //     }
-        //     if (out_elempack == 1)
-        //     {
-
-        //         // int32x4x2_t _sum01 = vzipq_s32(_sum0, _sum1);
-        //         // vst1_s32(outptr, vget_low_s32(_sum01.val[0]));
-        //         // vst1_s32(outptr + M, vget_high_s32(_sum01.val[0]));
-        //         // vst1_s32(outptr + M * 2, vget_low_s32(_sum01.val[1]));
-        //         // vst1_s32(outptr + M * 3, vget_high_s32(_sum01.val[1]));
-        //         outptr += 2;
-        //     }
-        // }
         for (; ij < outw * outh; ij++)
         {
             const int i = ij / outw;
@@ -1005,6 +710,7 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
             }
             for (; q < inch; q++)
             {
+                vl = 4;
                 const signed char* r0 = bottom_blob.channel(q).row<const signed char>(i * stride_h) + j * stride_w;
 
                 for (int k = 0; k < maxk; k++)
@@ -1064,111 +770,7 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
         int* outptr1 = top_blob.channel(p + 1);
 
         int ij = 0;
-        //         for (; ij + 1 < outw * outh; ij += 2)
-        //         {
-        //             const int i0 = ij / outw;
-        //             const int i1 = (ij + 1) / outw;
-        //             const int j0 = ij % outw;
-        //             const int j1 = (ij + 1) % outw;
 
-        //             int sum00 = 0;
-        //             int sum01 = 0;
-        //             int sum10 = 0;
-        //             int sum11 = 0;
-
-        // #if __riscv_vector
-        //             const signed char* kptr = weight_data_tm.channel(p / 8 + (p % 8) / 4 + (p % 4) / 2);
-        // #else
-        //             const signed char* kptr = weight_data_tm.channel(p / 2);
-        // #endif
-
-        //             int q = 0;
-        // #if __riscv_vector
-        //             {
-        //                 int32x4_t _sum01 = vdupq_n_s32(0);
-        //                 int32x4_t _sum23 = vdupq_n_s32(0);
-        //                 for (; q + 7 < inch; q += 8)
-        //                 {
-        //                     const signed char* r0 = bottom_blob.channel(q / elempack).row<const signed char>(i0 * stride_h) + j0 * stride_w * elempack;
-        //                     const signed char* r1 = bottom_blob.channel(q / elempack).row<const signed char>(i1 * stride_h) + j1 * stride_w * elempack;
-
-        //                     for (int k = 0; k < maxk; k++)
-        //                     {
-        //                         const signed char* r0s = r0 + space_ofs[k];
-        //                         const signed char* r1s = r1 + space_ofs[k];
-
-        //                         int8x8_t _r0;
-        //                         int8x8_t _r1;
-        //                         if (elempack == 8)
-        //                         {
-        //                             _r0 = vld1_s8(r0s);
-        //                             _r1 = vld1_s8(r1s);
-        //                         }
-        //                         else // if (elempack == 1)
-        //                         {
-        //                             signed char tmp0[8] = {r0s[0], r0s[N], r0s[N * 2], r0s[N * 3], r0s[N * 4], r0s[N * 5], r0s[N * 6], r0s[N * 7]};
-        //                             signed char tmp1[8] = {r1s[0], r1s[N], r1s[N * 2], r1s[N * 3], r1s[N * 4], r1s[N * 5], r1s[N * 6], r1s[N * 7]};
-        //                             _r0 = vld1_s8(tmp0);
-        //                             _r1 = vld1_s8(tmp1);
-        //                         }
-
-        //                         int8x16_t _w0 = vld1q_s8(kptr);
-
-        //                         int32x2x2_t _rr0 = vzip_s32(vreinterpret_s32_s8(_r0), vreinterpret_s32_s8(_r0));
-        //                         int32x2x2_t _rr1 = vzip_s32(vreinterpret_s32_s8(_r1), vreinterpret_s32_s8(_r1));
-        //                         int8x8_t _r0l = vreinterpret_s8_s32(_rr0.val[0]);
-        //                         int8x8_t _r0h = vreinterpret_s8_s32(_rr0.val[1]);
-        //                         int8x8_t _r1l = vreinterpret_s8_s32(_rr1.val[0]);
-        //                         int8x8_t _r1h = vreinterpret_s8_s32(_rr1.val[1]);
-
-        //                         int16x8_t _s01 = vmull_s8(_r0l, vget_low_s8(_w0));
-        //                         int16x8_t _s23 = vmull_s8(_r1l, vget_low_s8(_w0));
-        //                         _s01 = vmlal_s8(_s01, _r0h, vget_high_s8(_w0));
-        //                         _s23 = vmlal_s8(_s23, _r1h, vget_high_s8(_w0));
-
-        //                         _sum01 = vpadalq_s16(_sum01, _s01);
-        //                         _sum23 = vpadalq_s16(_sum23, _s23);
-
-        //                         kptr += 16;
-        //                     }
-        //                 }
-        //                 int32x2_t _s0 = vpadd_s32(vget_low_s32(_sum01), vget_high_s32(_sum01));
-        //                 int32x2_t _s1 = vpadd_s32(vget_low_s32(_sum23), vget_high_s32(_sum23));
-        //                 sum00 += vget_lane_s32(_s0, 0);
-        //                 sum01 += vget_lane_s32(_s1, 0);
-        //                 sum10 += vget_lane_s32(_s0, 1);
-        //                 sum11 += vget_lane_s32(_s1, 1);
-        //             }
-        // #endif // __riscv_vector
-        //             for (; q < inch; q++)
-        //             {
-        //                 const signed char* r0 = bottom_blob.channel(q).row<const signed char>(i0 * stride_h) + j0 * stride_w;
-        //                 const signed char* r1 = bottom_blob.channel(q).row<const signed char>(i1 * stride_h) + j1 * stride_w;
-
-        //                 for (int k = 0; k < maxk; k++)
-        //                 {
-        //                     const signed char* r0s = r0 + space_ofs[k];
-        //                     const signed char* r1s = r1 + space_ofs[k];
-
-        //                     // if (elempack == 1)
-        //                     {
-        //                         sum00 += r0s[0] * kptr[0];
-        //                         sum01 += r1s[0] * kptr[0];
-        //                         sum10 += r0s[0] * kptr[1];
-        //                         sum11 += r1s[0] * kptr[1];
-
-        //                         kptr += 2;
-        //                     }
-        //                 }
-        //             }
-
-        //             outptr0[0] = sum00;
-        //             outptr0[1] = sum01;
-        //             outptr1[0] = sum10;
-        //             outptr1[1] = sum11;
-        //             outptr0 += 2;
-        //             outptr1 += 2;
-        //         }
         for (; ij < outw * outh; ij++)
         {
             const int i = ij / outw;
@@ -1188,10 +790,6 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
             {
                 // int32x4_t _sum01 = vdupq_n_s32(0);
                 vl = 4;
-                uint16_t odd_index[4] = {1, 3, 5, 7};
-                uint16_t even_index[4] = {0, 2, 4, 6};
-                vuint16m1_t _odd_index = vle16_v_u16m1(odd_index, vl);
-                vuint16m1_t _even_index = vle16_v_u16m1(even_index, vl);
                 vint32m2_t _sum01 = vmv_v_x_i32m2(0, vl);
                 for (; q + 7 < inch; q += 8)
                 {
@@ -1204,6 +802,7 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
 
                         // int8x8_t _r0;
                         vint8m1_t _r0;
+                        vl = 8;
                         if (elempack == 8)
                         {
                             _r0 = vle8_v_i8m1(r0s, vl);
@@ -1220,8 +819,11 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
                         vl = 16;
                         vint8m1_t _w0 = vle8_v_i8m1(kptr, vl);
                         vl = 8;
+                        // fprintf(stderr, "r0: \n");
+                        // print_vint8m1(_r0, 8);
                         vint8m1_t _r0l = vslideup_vx_i8m1(_r0, _r0, 4, vl);
                         vint8m1_t _r0h = vslidedown_vx_i8m1(_r0, _r0, 4, vl);
+                        _r0h = vslideup_vx_i8m1(_r0h, _r0h, 4, vl);
 
                         // vint32m1_t _r0_i16 = vreinterpret_v_i32m1_i8m1(_r0);
 
@@ -1234,6 +836,10 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
                         vint16m1_t _s01 = vget_v_i16m2_i16m1(_s01_m2, 0);
 
                         vl = 4;
+                        uint16_t odd_index[4] = {1, 3, 5, 7};
+                        uint16_t even_index[4] = {0, 2, 4, 6};
+                        vuint16m1_t _odd_index = vle16_v_u16m1(odd_index, vl);
+                        vuint16m1_t _even_index = vle16_v_u16m1(even_index, vl);
                         _sum01 = vwadd_wv_i32m2(_sum01, vrgather_vv_i16m1(_s01, _odd_index, vl), vl);
                         _sum01 = vwadd_wv_i32m2(_sum01, vrgather_vv_i16m1(_s01, _even_index, vl), vl);
 
@@ -1284,105 +890,7 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
         int* outptr = top_blob.channel(p);
 
         int ij = 0;
-        //         for (; ij + 1 < outw * outh; ij += 2)
-        //         {
-        //             const int i0 = ij / outw;
-        //             const int i1 = (ij + 1) / outw;
-        //             const int j0 = ij % outw;
-        //             const int j1 = (ij + 1) % outw;
-
-        //             int sum0 = 0;
-        //             int sum1 = 0;
-
-        // #if __riscv_vector
-        //             const signed char* kptr = weight_data_tm.channel(p / 8 + (p % 8) / 4 + (p % 4) / 2 + p % 2);
-        // #else
-        //             const signed char* kptr = weight_data_tm.channel(p / 2 + p % 2);
-        // #endif
-
-        //             int q = 0;
-        // #if __riscv_vector
-        //             {
-        //                 int32x4_t _sum0 = vdupq_n_s32(0);
-        //                 int32x4_t _sum1 = vdupq_n_s32(0);
-        //                 int32x4_t _sum2 = vdupq_n_s32(0);
-        //                 int32x4_t _sum3 = vdupq_n_s32(0);
-        //                 for (; q + 7 < inch; q += 8)
-        //                 {
-        //                     const signed char* r0 = bottom_blob.channel(q / elempack).row<const signed char>(i0 * stride_h) + j0 * stride_w * elempack;
-        //                     const signed char* r1 = bottom_blob.channel(q / elempack).row<const signed char>(i1 * stride_h) + j1 * stride_w * elempack;
-
-        //                     for (int k = 0; k < maxk; k++)
-        //                     {
-        //                         const signed char* r0s = r0 + space_ofs[k];
-        //                         const signed char* r1s = r1 + space_ofs[k];
-
-        //                         int8x8_t _r0;
-        //                         int8x8_t _r1;
-        //                         if (elempack == 8)
-        //                         {
-        //                             _r0 = vld1_s8(r0s);
-        //                             _r1 = vld1_s8(r1s);
-        //                         }
-        //                         else // if (elempack == 1)
-        //                         {
-        //                             signed char tmp0[8] = {r0s[0], r0s[N], r0s[N * 2], r0s[N * 3], r0s[N * 4], r0s[N * 5], r0s[N * 6], r0s[N * 7]};
-        //                             signed char tmp1[8] = {r1s[0], r1s[N], r1s[N * 2], r1s[N * 3], r1s[N * 4], r1s[N * 5], r1s[N * 6], r1s[N * 7]};
-        //                             _r0 = vld1_s8(tmp0);
-        //                             _r1 = vld1_s8(tmp1);
-        //                         }
-
-        //                         int8x8_t _w = vld1_s8(kptr);
-
-        //                         int16x8_t _s0 = vmull_s8(_r0, _w);
-        //                         int16x8_t _s1 = vmull_s8(_r1, _w);
-
-        //                         _sum0 = vaddw_s16(_sum0, vget_low_s16(_s0));
-        //                         _sum1 = vaddw_s16(_sum1, vget_high_s16(_s0));
-        //                         _sum2 = vaddw_s16(_sum2, vget_low_s16(_s1));
-        //                         _sum3 = vaddw_s16(_sum3, vget_high_s16(_s1));
-
-        //                         kptr += 8;
-        //                     }
-        //                 }
-        //                 _sum0 = vaddq_s32(_sum0, _sum1);
-        //                 _sum2 = vaddq_s32(_sum2, _sum3);
-        // #if __aarch64__
-        //                 sum0 += vaddvq_s32(_sum0);
-        //                 sum1 += vaddvq_s32(_sum2);
-        // #else
-        //                 int32x2_t _ss0 = vadd_s32(vget_low_s32(_sum0), vget_high_s32(_sum0));
-        //                 int32x2_t _ss2 = vadd_s32(vget_low_s32(_sum2), vget_high_s32(_sum2));
-        //                 _ss0 = vpadd_s32(_ss0, _ss2);
-        //                 sum0 += vget_lane_s32(_ss0, 0);
-        //                 sum1 += vget_lane_s32(_ss0, 1);
-        // #endif
-        //             }
-        // #endif // __riscv_vector
-        //             for (; q < inch; q++)
-        //             {
-        //                 const signed char* r0 = bottom_blob.channel(q).row<const signed char>(i0 * stride_h) + j0 * stride_w;
-        //                 const signed char* r1 = bottom_blob.channel(q).row<const signed char>(i1 * stride_h) + j1 * stride_w;
-
-        //                 for (int k = 0; k < maxk; k++)
-        //                 {
-        //                     const signed char* r0s = r0 + space_ofs[k];
-        //                     const signed char* r1s = r1 + space_ofs[k];
-
-        //                     // if (elempack == 1)
-        //                     {
-        //                         sum0 += r0s[0] * kptr[0];
-        //                         sum1 += r1s[0] * kptr[0];
-
-        //                         kptr += 1;
-        //                     }
-        //                 }
-        //             }
-
-        //             outptr[0] = sum0;
-        //             outptr[1] = sum1;
-        //             outptr += 2;
-        //         }
+        
         for (; ij < outw * outh; ij++)
         {
             const int i = ij / outw;
@@ -1440,7 +948,13 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
                 }
                 // int32x4_t _sum = vaddq_s32(_sum0, _sum1);
                 // #if __aarch64__
-                sum = vmv_x_s_i32m1_i32(vredsum_vs_i32m2_i32m1(vint32m1_t(), _sum01, vmv_v_x_i32m1(sum, vl), vl));
+                vl = 8;
+                vint32m1_t _scalar_sum = vmv_s_x_i32m1(vint32m1_t(), sum, vl);
+                sum = vmv_x_s_i32m1_i32(vredsum_vs_i32m2_i32m1(_scalar_sum, _sum01, _scalar_sum, vl));
+                // int res[8] = {0, 0, 0, 0};
+                // vl = 4;
+                // vse32_v_i32m2(res, _sum01, vl);
+                // sum += (res[0] + res[1] + res[2] + res[3]);
                 // sum += vaddvq_s32(_sum);
                 // #else
                 //                 int32x2_t _ss = vadd_s32(vget_low_s32(_sum), vget_high_s32(_sum));

@@ -35,6 +35,10 @@ namespace ncnn {
 #include "convolution_1x1.h"
 #include "convolution_3x3.h"
 
+#if NCNN_INT8
+#include "convolution_packed_int8.h"
+#endif // NCNN_INT8
+
 #if __riscv_vector
 #include "convolution_packn.h"
 #include "convolution_pack1ton.h"
@@ -1228,13 +1232,13 @@ int Convolution_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, const
     if (top_blob_int32.empty())
         return -100;
 
-    int _nT = nT ? nT : opt.num_threads;
-    if (nT != 0 && opt.num_threads != nT)
-    {
-        // force num_threads the same as in create_pipeline
-        // so we could use pre-packed A/B from the same tile config
-        NCNN_LOGE("opt.num_threads %d changed, convolution gemm will use load-time value %d", opt.num_threads, nT);
-    }
+    // int _nT = nT ? nT : opt.num_threads;
+    // if (nT != 0 && opt.num_threads != nT)
+    // {
+    //     // force num_threads the same as in create_pipeline
+    //     // so we could use pre-packed A/B from the same tile config
+    //     NCNN_LOGE("opt.num_threads %d changed, convolution gemm will use load-time value %d", opt.num_threads, nT);
+    // }
 #if 0
     if (opt.use_winograd_convolution && prefer_winograd)
     {

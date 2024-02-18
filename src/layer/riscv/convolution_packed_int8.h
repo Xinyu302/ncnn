@@ -621,7 +621,7 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
                         vint8m1_t _r0;
                         if (elempack == 8)
                         {
-                            _r0 = vle8_v_i8m1(r0s, vl);`
+                            _r0 = vle8_v_i8m1(r0s, vl);
                             // _r0 = vld1_s8(r0s);
                         }
                         else // if (elempack == 1)

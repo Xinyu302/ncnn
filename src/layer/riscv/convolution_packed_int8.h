@@ -631,15 +631,12 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
                             // _r0 = vld1_s8(tmp);
                         }
 
-                        
                         // int8x16_t _w0 = vld1q_s8(kptr);
                         // int8x16_t _w1 = vld1q_s8(kptr + 16);
                         // int8x16_t _w2 = vld1q_s8(kptr + 32);
                         // int8x16_t _w3 = vld1q_s8(kptr + 48);
 
                         // int16x4_t _rr0 = vreinterpret_s16_s8(_r0);
-
-                        
 
                         int8x8_t _r0ll = vreinterpret_s8_s16(vdup_lane_s16(_rr0, 0));
                         int8x8_t _r0lh = vreinterpret_s8_s16(vdup_lane_s16(_rr0, 1));

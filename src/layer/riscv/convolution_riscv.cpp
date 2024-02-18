@@ -138,7 +138,7 @@ int Convolution_riscv::create_pipeline(const Option& opt)
     if (opt.use_int8_inference && weight_data.elemsize == (size_t)1u)
     {
         // TODO implement int8
-        return 0;
+        return create_pipeline_int8(opt);
     }
 #endif
 
@@ -263,27 +263,28 @@ int Convolution_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Opti
 #if NCNN_INT8
     if (opt.use_int8_inference && int8_scale_term)
     {
-        Mat bottom_blob_unpacked = bottom_blob;
-        if (bottom_blob.elempack != 1)
-        {
-            Option opt_pack1 = opt;
-            opt_pack1.blob_allocator = opt.workspace_allocator;
+        return forward_int8(bottom_blob, top_blob, opt);
+        // Mat bottom_blob_unpacked = bottom_blob;
+        // if (bottom_blob.elempack != 1)
+        // {
+        //     Option opt_pack1 = opt;
+        //     opt_pack1.blob_allocator = opt.workspace_allocator;
 
-            convert_packing(bottom_blob, bottom_blob_unpacked, 1, opt_pack1);
-        }
+        //     convert_packing(bottom_blob, bottom_blob_unpacked, 1, opt_pack1);
+        // }
 
-        Mat bottom_blob_unpacked_fp32 = bottom_blob_unpacked;
-        if (bottom_blob_unpacked.elembits() == 16)
-        {
-            Option opt_pack1 = opt;
-            opt_pack1.blob_allocator = opt.workspace_allocator;
+        // Mat bottom_blob_unpacked_fp32 = bottom_blob_unpacked;
+        // if (bottom_blob_unpacked.elembits() == 16)
+        // {
+        //     Option opt_pack1 = opt;
+        //     opt_pack1.blob_allocator = opt.workspace_allocator;
 
-            cast_float16_to_float32(bottom_blob_unpacked, bottom_blob_unpacked_fp32, opt_pack1);
-        }
+        //     cast_float16_to_float32(bottom_blob_unpacked, bottom_blob_unpacked_fp32, opt_pack1);
+        // }
 
-        Option opt_unpacked = opt;
-        opt_unpacked.use_packing_layout = false;
-        return Convolution::forward_int8(bottom_blob_unpacked_fp32, top_blob, opt_unpacked);
+        // Option opt_unpacked = opt;
+        // opt_unpacked.use_packing_layout = false;
+        // return Convolution::forward_int8(bottom_blob_unpacked_fp32, top_blob, opt_unpacked);
     }
 #endif
 

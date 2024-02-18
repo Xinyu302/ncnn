@@ -444,6 +444,7 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
 
                     for (int k = 0; k < maxk; k++)
                     {
+                        vl = 8;
                         const signed char* r0s = r0 + space_ofs[k];
 
                         // int8x8_t _r0;
@@ -548,6 +549,7 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
 
                 for (int k = 0; k < maxk; k++)
                 {
+                    vl = 8;
                     const signed char* r0s = r0 + space_ofs[k];
 
                     // if (elempack == 1)
@@ -629,13 +631,13 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
 
             int q = 0;
             {
-                vl = 8;
                 for (; q + 7 < inch; q += 8)
                 {
                     const signed char* r0 = bottom_blob.channel(q / elempack).row<const signed char>(i * stride_h) + j * stride_w * elempack;
 
                     for (int k = 0; k < maxk; k++)
                     {
+                        vl = 8;
                         const signed char* r0s = r0 + space_ofs[k];
 
                         // int8x8_t _r0;
@@ -715,6 +717,7 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
 
                 for (int k = 0; k < maxk; k++)
                 {
+                    vl = 4;
                     const signed char* r0s = r0 + space_ofs[k];
 
                     // if (elempack == 1)
@@ -798,11 +801,11 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
 
                     for (int k = 0; k < maxk; k++)
                     {
+                        vl = 8;
                         const signed char* r0s = r0 + space_ofs[k];
 
                         // int8x8_t _r0;
                         vint8m1_t _r0;
-                        vl = 8;
                         if (elempack == 8)
                         {
                             _r0 = vle8_v_i8m1(r0s, vl);
@@ -917,6 +920,7 @@ static void convolution_packed_int8(const Mat& bottom_blob, Mat& top_blob, const
 
                     for (int k = 0; k < maxk; k++)
                     {
+                        vl = 8;
                         const signed char* r0s = r0 + space_ofs[k];
 
                         vint8m1_t _r0;

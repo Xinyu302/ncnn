@@ -33,7 +33,7 @@ static void convolution_im2col_pack_A_tile_int8(const Mat& A, Mat& AT, int i, in
         const signed char* p7 = (const signed char*)A + (i + ii + 7) * A_hstep + k;
 
         int n = max_kk;
-        while (n > 0) 
+        while (n > 0)
         {
             const size_t vl = vsetvl_i8m1(n);
             vint8m1_t _r0 = vle8_v_i8m1(p0, vl);
@@ -59,7 +59,6 @@ static void convolution_im2col_pack_A_tile_int8(const Mat& A, Mat& AT, int i, in
             p7 += vl;
             n -= vl;
         }
-
     }
     for (; ii + 3 < max_ii; ii += 4)
     {
@@ -69,7 +68,7 @@ static void convolution_im2col_pack_A_tile_int8(const Mat& A, Mat& AT, int i, in
         const signed char* p3 = (const signed char*)A + (i + ii + 3) * A_hstep + k;
 
         int n = max_kk;
-        while (n > 0) 
+        while (n > 0)
         {
             const size_t vl = vsetvl_i8m1(n);
             vint8m1_t _r0 = vle8_v_i8m1(p0, vl);
@@ -96,7 +95,7 @@ static void convolution_im2col_pack_A_tile_int8(const Mat& A, Mat& AT, int i, in
 
         int n = max_kk;
 #if __riscv_vector
-        while (n > 0) 
+        while (n > 0)
         {
             const size_t vl = vsetvl_i8m1(n);
             vint8m1_t _r0 = vle8_v_i8m1(p0, vl);
@@ -127,7 +126,7 @@ static void convolution_im2col_pack_A_tile_int8(const Mat& A, Mat& AT, int i, in
 
         int n = max_kk;
 #if __riscv_vector
-        while (n > 0) 
+        while (n > 0)
         {
             const size_t vl = vsetvl_i8m1(n);
             vint8m1_t _r0 = vle8_v_i8m1(p0, vl);
@@ -315,13 +314,13 @@ static void convolution_gemm_transB_packed_tile_int8(const Mat& AT_tile, const M
                 //      01234567 01234567
                 //      32107654 32107654
                 //              =
-                //      a0 b1 c2 d3 e4 f5 g6 h7 
+                //      a0 b1 c2 d3 e4 f5 g6 h7
                 //      e0 f1 g2 h3 a4 b5 c6 d7
-                //      c0 d1 a2 b3 g4 h5 e6 f7 
+                //      c0 d1 a2 b3 g4 h5 e6 f7
                 //      g0 h1 e2 f3 c4 d5 a6 b7
-                //      a3 b2 c1 d0 e7 f6 g5 h4 
+                //      a3 b2 c1 d0 e7 f6 g5 h4
                 //      e3 f2 g1 h0 a7 b6 c5 d4
-                //      c3 d2 a1 b0 g7 h6 e5 f4 
+                //      c3 d2 a1 b0 g7 h6 e5 f4
                 //      g3 h2 e1 f0 c7 d6 a5 b4
                 if (out_elempack == 8)
                 {
@@ -356,7 +355,7 @@ static void convolution_gemm_transB_packed_tile_int8(const Mat& AT_tile, const M
                     // after
                     //     00 01 02 03 04 05 06 07   08 09 0a 0b 0c 0d 0e 0f   10 11 12 13 14 15 16 17   18 19 1a 1b 1c 1d 1e 1f
                     //    -------------------------------------------------------------------------------------------------------
-                    //     a0 b1 c2 d3 e4 f5 g6 h7 | c3 d2 a1 b0 g7 h6 e5 f4 | c0 d1 a2 b3 g4 h5 e6 f7 | a3 b2 c1 d0 e7 f6 g5 h4  
+                    //     a0 b1 c2 d3 e4 f5 g6 h7 | c3 d2 a1 b0 g7 h6 e5 f4 | c0 d1 a2 b3 g4 h5 e6 f7 | a3 b2 c1 d0 e7 f6 g5 h4
                     //     e0 f1 g2 h3 a4 b5 c6 d7 | g3 h2 e1 f0 c7 d6 a5 b4 | g0 h1 e2 f3 c4 d5 a6 b7 | e3 f2 g1 h0 a7 b6 c5 d4
                     uint32_t _perm_idx_arr[vl] = {
                         0x00, 0x0b, 0x10, 0x1b, // a0 b0 c0 d0
@@ -422,7 +421,7 @@ static void convolution_gemm_transB_packed_tile_int8(const Mat& AT_tile, const M
                     // after
                     //     00 01 02 03 04 05 06 07   08 09 0a 0b 0c 0d 0e 0f   10 11 12 13 14 15 16 17   18 19 1a 1b 1c 1d 1e 1f
                     //    -------------------------------------------------------------------------------------------------------
-                    //     a0 b1 c2 d3 e4 f5 g6 h7 | c3 d2 a1 b0 g7 h6 e5 f4 | c0 d1 a2 b3 g4 h5 e6 f7 | a3 b2 c1 d0 e7 f6 g5 h4  
+                    //     a0 b1 c2 d3 e4 f5 g6 h7 | c3 d2 a1 b0 g7 h6 e5 f4 | c0 d1 a2 b3 g4 h5 e6 f7 | a3 b2 c1 d0 e7 f6 g5 h4
                     //     e0 f1 g2 h3 a4 b5 c6 d7 | g3 h2 e1 f0 c7 d6 a5 b4 | g0 h1 e2 f3 c4 d5 a6 b7 | e3 f2 g1 h0 a7 b6 c5 d4
                     uint32_t _perm_idx_arr[vl] = {
                         0x00, 0x0b, 0x10, 0x1b, // a0 b0 c0 d0
@@ -489,7 +488,7 @@ static void convolution_gemm_transB_packed_tile_int8(const Mat& AT_tile, const M
                     // after
                     //     00 01 02 03 04 05 06 07   08 09 0a 0b 0c 0d 0e 0f   10 11 12 13 14 15 16 17   18 19 1a 1b 1c 1d 1e 1f
                     //    -------------------------------------------------------------------------------------------------------
-                    //     a0 b1 c2 d3 e4 f5 g6 h7 | c3 d2 a1 b0 g7 h6 e5 f4 | c0 d1 a2 b3 g4 h5 e6 f7 | a3 b2 c1 d0 e7 f6 g5 h4  
+                    //     a0 b1 c2 d3 e4 f5 g6 h7 | c3 d2 a1 b0 g7 h6 e5 f4 | c0 d1 a2 b3 g4 h5 e6 f7 | a3 b2 c1 d0 e7 f6 g5 h4
                     //     e0 f1 g2 h3 a4 b5 c6 d7 | g3 h2 e1 f0 c7 d6 a5 b4 | g0 h1 e2 f3 c4 d5 a6 b7 | e3 f2 g1 h0 a7 b6 c5 d4
                     uint32_t _perm_idx_arr[vl] = {
                         0x00, 0x0a, 0x12, 0x18, // a0 a1 a2 a3
@@ -500,8 +499,8 @@ static void convolution_gemm_transB_packed_tile_int8(const Mat& AT_tile, const M
                         0x0f, 0x05, 0x1d, 0x17, // f4 f5 f6 f7
                         0x14, 0x1e, 0x06, 0x0c, // g4 g5 g6 g7
                         0x1f, 0x15, 0x0d, 0x07, // h4 h5 h6 h7
-                    }
-                    vuint32m8_t _perm_idx = vle32_v_u32m8(_perm_idx_arr, vl);
+                    } vuint32m8_t _perm_idx
+                        = vle32_v_u32m8(_perm_idx_arr, vl);
                     _t0 = vrgather_vv_i32m8(_t0, _perm_idx, vl);
                     _t1 = vrgather_vv_i32m8(_t1, _perm_idx, vl);
 
@@ -694,7 +693,6 @@ static void convolution_gemm_transB_packed_tile_int8(const Mat& AT_tile, const M
 
             if (k_end)
             {
-
                 // from
                 //      a0 b1 c2 d3
                 //      e0 f1 g2 h3
@@ -1315,7 +1313,6 @@ static void convolution_gemm_transB_packed_tile_int8(const Mat& AT_tile, const M
 
             if (k_end)
             {
-
                 // from
                 //      a0 b1 c2 d3
                 //      a4 b5 c6 d7
@@ -2110,7 +2107,7 @@ static void convolution_gemm_transB_packed_tile_int8(const Mat& AT_tile, const M
             }
 
             outptr += 4;
-#else // __riscv_vector
+#else  // __riscv_vector
             int sum00;
             int sum10;
             int sum01;

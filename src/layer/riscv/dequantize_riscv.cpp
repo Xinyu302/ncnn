@@ -41,7 +41,7 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
     int dims = bottom_blob.dims;
     int elempack = bottom_blob.elempack;
 
-    if (support_fp16_storage && opt.use_fp16_storage) 
+    if (support_fp16_storage && opt.use_fp16_storage)
     {
         if (opt.use_fp16_arithmetic)
         {
@@ -944,7 +944,7 @@ int Dequantize_riscv::forward_fp16s(const Mat& bottom_blob, Mat& top_blob, const
                     {
                         vl = vsetvl_e32m8(n);
                         const int* intptr = (const int*)bottom_blob + offset;
-                        __fp16* ptr = (__fp16 *)top_blob + offset;
+                        __fp16* ptr = (__fp16*)top_blob + offset;
                         vfloat32m8_t _v = vfcvt_f_x_v_f32m8(vle32_v_i32m8(intptr, vl), vl);
                         _v = vfmul_vf_f32m8(_v, _scale, vl);
                         // vse32_v_f32m8(ptr, _v, vl);
@@ -973,7 +973,7 @@ int Dequantize_riscv::forward_fp16s(const Mat& bottom_blob, Mat& top_blob, const
                     {
                         vl = vsetvl_e32m8(n);
                         const int* intptr = (const int*)bottom_blob + offset;
-                        __fp16* ptr = (__fp16 *)top_blob + offset;
+                        __fp16* ptr = (__fp16*)top_blob + offset;
                         vfloat32m8_t _bias = vfmv_v_f_f32m8(bias_data[0], vl);
                         vfloat32m8_t _v = vfcvt_f_x_v_f32m8(vle32_v_i32m8(intptr, vl), vl);
                         _v = vfmadd_vf_f32m8(_v, _scale, _bias, vl);
@@ -1002,7 +1002,7 @@ int Dequantize_riscv::forward_fp16s(const Mat& bottom_blob, Mat& top_blob, const
                     {
                         vl = vsetvl_e32m8(n);
                         const int* intptr = (const int*)bottom_blob + offset;
-                        __fp16* ptr = (__fp16 *)top_blob + offset;
+                        __fp16* ptr = (__fp16*)top_blob + offset;
                         vfloat32m8_t _bias = vle32_v_f32m8((const float*)bias_data + offset, vl);
                         vfloat32m8_t _v = vfcvt_f_x_v_f32m8(vle32_v_i32m8(intptr, vl), vl);
                         _v = vfmadd_vf_f32m8(_v, _scale, _bias, vl);
@@ -1035,7 +1035,7 @@ int Dequantize_riscv::forward_fp16s(const Mat& bottom_blob, Mat& top_blob, const
                     {
                         vl = vsetvl_e32m8(n);
                         const int* intptr = (const int*)bottom_blob + offset;
-                        __fp16* ptr = (__fp16 *)top_blob + offset;
+                        __fp16* ptr = (__fp16*)top_blob + offset;
 
                         vfloat32m8_t _scale = vle32_v_f32m8((const float*)scale_data + offset, vl);
                         vfloat32m8_t _v = vfcvt_f_x_v_f32m8(vle32_v_i32m8(intptr, vl), vl);
@@ -1068,7 +1068,7 @@ int Dequantize_riscv::forward_fp16s(const Mat& bottom_blob, Mat& top_blob, const
                     {
                         vl = vsetvl_e32m8(n);
                         const int* intptr = (const int*)bottom_blob + offset;
-                        __fp16* ptr = (__fp16 *)top_blob + offset;
+                        __fp16* ptr = (__fp16*)top_blob + offset;
 
                         vfloat32m8_t _scale = vle32_v_f32m8((const float*)scale_data + offset, vl);
                         vfloat32m8_t _bias = vfmv_v_f_f32m8(bias_data[0], vl);
@@ -1101,7 +1101,7 @@ int Dequantize_riscv::forward_fp16s(const Mat& bottom_blob, Mat& top_blob, const
                     {
                         vl = vsetvl_e32m8(n);
                         const int* intptr = (const int*)bottom_blob + offset;
-                        __fp16* ptr = (__fp16 *)top_blob + offset;
+                        __fp16* ptr = (__fp16*)top_blob + offset;
 
                         vfloat32m8_t _scale = vle32_v_f32m8((const float*)scale_data + offset, vl);
                         vfloat32m8_t _bias = vle32_v_f32m8((const float*)bias_data + offset, vl);
@@ -1247,7 +1247,7 @@ int Dequantize_riscv::forward_fp16s(const Mat& bottom_blob, Mat& top_blob, const
                     vfloat32m2_t _scale0 = scale_data_size == 1 ? vfmv_v_f_f32m2(scale_data[0], vl) : vle32_v_f32m2((const float*)scale_data + q * 8, vl);
                     vfloat32m2_t _scale1 = scale_data_size == 1 ? vfmv_v_f_f32m2(scale_data[0], vl) : vle32_v_f32m2((const float*)scale_data + q * 8 + 4, vl);
 
-                    for (int i = 0; i < size; i++) 
+                    for (int i = 0; i < size; i++)
                     {
                         vfloat32m2_t _v0 = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
                         vfloat32m2_t _v1 = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr + 4, vl), vl);
@@ -1365,7 +1365,7 @@ int Dequantize_riscv::forward_fp16s(const Mat& bottom_blob, Mat& top_blob, const
                     {
                         vl = vsetvl_e32m8(n);
                         const int* intptr = (const int*)bottom_blob + offset;
-                        __fp16* ptr = (__fp16 *)top_blob + offset;
+                        __fp16* ptr = (__fp16*)top_blob + offset;
                         vfloat32m8_t _scale = vfmv_v_f_f32m8(scale_data[0], vl);
                         vfloat32m8_t _v = vfcvt_f_x_v_f32m8(vle32_v_i32m8(intptr, vl), vl);
                         _v = vfmul_vv_f32m8(_v, _scale, vl);
@@ -1395,7 +1395,7 @@ int Dequantize_riscv::forward_fp16s(const Mat& bottom_blob, Mat& top_blob, const
                     {
                         vl = vsetvl_e32m8(n);
                         const int* intptr = (const int*)bottom_blob + offset;
-                        __fp16* ptr = (__fp16 *)top_blob + offset;
+                        __fp16* ptr = (__fp16*)top_blob + offset;
                         vfloat32m8_t _scale = vfmv_v_f_f32m8(scale_data[0], vl);
                         vfloat32m8_t _bias = vfmv_v_f_f32m8(bias_data[0], vl);
                         vfloat32m8_t _v = vfcvt_f_x_v_f32m8(vle32_v_i32m8(intptr, vl), vl);
@@ -1425,7 +1425,7 @@ int Dequantize_riscv::forward_fp16s(const Mat& bottom_blob, Mat& top_blob, const
                     {
                         vl = vsetvl_e32m8(n);
                         const int* intptr = (const int*)bottom_blob + offset;
-                        __fp16* ptr = (__fp16 *)top_blob + offset;
+                        __fp16* ptr = (__fp16*)top_blob + offset;
                         vfloat32m8_t _scale = vfmv_v_f_f32m8(scale_data[0], vl);
                         vfloat32m8_t _bias = vle32_v_f32m8((const float*)bias_data + offset, vl);
                         vfloat32m8_t _v = vfcvt_f_x_v_f32m8(vle32_v_i32m8(intptr, vl), vl);
@@ -1458,7 +1458,7 @@ int Dequantize_riscv::forward_fp16s(const Mat& bottom_blob, Mat& top_blob, const
                     {
                         vl = vsetvl_e32m8(n);
                         const int* intptr = (const int*)bottom_blob + offset;
-                        __fp16* ptr = (__fp16 *)top_blob + offset;
+                        __fp16* ptr = (__fp16*)top_blob + offset;
                         vfloat32m8_t _scale = vle32_v_f32m8((const float*)scale_data + offset, vl);
                         vfloat32m8_t _v = vfcvt_f_x_v_f32m8(vle32_v_i32m8(intptr, vl), vl);
                         _v = vfmul_vv_f32m8(_v, _scale, vl);
@@ -1466,7 +1466,7 @@ int Dequantize_riscv::forward_fp16s(const Mat& bottom_blob, Mat& top_blob, const
                         vse16_v_f16m4(ptr, vfncvt_f_f_w_f16m4(_v, vl), vl);
                         offset += vl;
                         n -= vl;
-                    }                    
+                    }
                 }
                 else if (bias_data_size == 1)
                 {
@@ -1489,7 +1489,7 @@ int Dequantize_riscv::forward_fp16s(const Mat& bottom_blob, Mat& top_blob, const
                     {
                         vl = vsetvl_e32m8(n);
                         const int* intptr = (const int*)bottom_blob + offset;
-                        __fp16* ptr = (__fp16 *)top_blob + offset;
+                        __fp16* ptr = (__fp16*)top_blob + offset;
                         vfloat32m8_t _scale = vle32_v_f32m8((const float*)scale_data + offset, vl);
                         vfloat32m8_t _bias = vfmv_v_f_f32m8(bias_data[0], vl);
                         vfloat32m8_t _v = vfcvt_f_x_v_f32m8(vle32_v_i32m8(intptr, vl), vl);
@@ -1520,7 +1520,7 @@ int Dequantize_riscv::forward_fp16s(const Mat& bottom_blob, Mat& top_blob, const
                     {
                         vl = vsetvl_e32m8(n);
                         const int* intptr = (const int*)bottom_blob + offset;
-                        __fp16* ptr = (__fp16 *)top_blob + offset;
+                        __fp16* ptr = (__fp16*)top_blob + offset;
                         vfloat32m8_t _scale = vle32_v_f32m8((const float*)scale_data + offset, vl);
                         vfloat32m8_t _bias = vle32_v_f32m8((const float*)bias_data + offset, vl);
                         vfloat32m8_t _v = vfcvt_f_x_v_f32m8(vle32_v_i32m8(intptr, vl), vl);
@@ -1653,7 +1653,6 @@ int Dequantize_riscv::forward_fp16s(const Mat& bottom_blob, Mat& top_blob, const
                         intptr += 4;
                         ptr += 4;
                     }
-
                 }
             }
             else
@@ -1789,7 +1788,7 @@ int Dequantize_riscv::forward_fp16s(const Mat& bottom_blob, Mat& top_blob, const
                 const float scale = scale_data_size == 1 ? scale_data[0] : scale_data[i];
 
                 int j = 0;
-                
+
                 int n = w;
                 int offset = 0;
                 while (n > 0)
@@ -1848,7 +1847,7 @@ int Dequantize_riscv::forward_fp16s(const Mat& bottom_blob, Mat& top_blob, const
                 // }
                 int n = w;
                 int offset = 0;
-                while(n > 0)
+                while (n > 0)
                 {
                     vl = vsetvl_e32m8(n);
                     vfloat32m8_t _scale = vfmv_v_f_f32m8(scale, vl);
@@ -1913,7 +1912,7 @@ int Dequantize_riscv::forward_fp16s(const Mat& bottom_blob, Mat& top_blob, const
                     vse16_v_f16m4(ptr + offset, vfncvt_f_f_w_f16m4(_v, vl), vl);
                     offset += vl;
                     n -= vl;
-                } 
+                }
             }
         }
         else

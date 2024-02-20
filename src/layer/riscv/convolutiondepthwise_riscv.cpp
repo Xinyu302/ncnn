@@ -1228,7 +1228,6 @@ int ConvolutionDepthWise_riscv::forward_int8(const Mat& bottom_blob, Mat& top_bl
     int outw = (w - kernel_extent_w) / stride_w + 1;
     int outh = (h - kernel_extent_h) / stride_h + 1;
 
-
     // depth-wise
     if (channels * elempack == group && group == num_output) // depth-wise conv, 逐通道卷积
     {
@@ -1581,7 +1580,7 @@ int ConvolutionDepthWise_riscv::forward_int8(const Mat& bottom_blob, Mat& top_bl
         // forward
         op->forward(bottom_blob_bordered_g, top_blob_g, opt_g);
     }
-    const float *top_blob_unpacked_data = top_blob_unpacked;
+    const float* top_blob_unpacked_data = top_blob_unpacked;
     // packing
     if (out_g_elempack < out_elempack)
     {

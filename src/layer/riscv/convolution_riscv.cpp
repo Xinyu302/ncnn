@@ -923,7 +923,7 @@ int Convolution_riscv::forward_fp16sa(const Mat& bottom_blob, Mat& top_blob, con
     int channels = bottom_blob.c;
     size_t elemsize = bottom_blob.elemsize;
     int elempack = bottom_blob.elempack;
-    fprintf(stderr, "forward_fp16sa elempack:%d\n", elempack);
+    // fprintf(stderr, "forward_fp16sa elempack:%d\n", elempack);
 
     // NCNN_LOGE("Convolution input %d x %d  pad = %d %d  ksize=%d %d  stride=%d %d", w, h, pad_w, pad_h, kernel_w, kernel_h, stride_w, stride_h);
 

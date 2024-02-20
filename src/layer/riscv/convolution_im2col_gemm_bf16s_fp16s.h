@@ -513,12 +513,12 @@ static void convolution_im2col_input_tile_bf16_fp16(const Mat& bottom_blob, Mat&
         return;
     }
     int vl;
-    fprintf(stderr, "convolution_im2col_input_tile_bf16_fp16\n");
+    // fprintf(stderr, "convolution_im2col_input_tile_bf16_fp16\n");
 
     const int w = bottom_blob.w;
     // const int channels = bottom_blob.c;
     const int elempack = bottom_blob.elempack;
-    fprintf(stderr, "elempack: %d\n", elempack);
+    // fprintf(stderr, "elempack: %d\n", elempack);
 
     const int kernel_extent_w = dilation_w * (kernel_w - 1) + 1;
     const int outw = (w - kernel_extent_w) / stride_w + 1;

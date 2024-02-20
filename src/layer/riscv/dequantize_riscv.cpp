@@ -46,7 +46,8 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
         if (opt.use_fp16_arithmetic)
         {
             return forward_fp16sa(bottom_blob, top_blob, opt);
-        } else 
+        }
+        else
         {
             return forward_fp16s(bottom_blob, top_blob, opt);
         }
@@ -2143,7 +2144,6 @@ int Dequantize_riscv::forward_fp16sa(const Mat& bottom_blob, Mat& top_blob, cons
                     // float32x4_t _scale1 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + i * 8 + 4);
                     vfloat32m2_t _scale0 = scale_data_size == 1 ? vfmv_v_f_f32m2(scale_data[0], vl) : vle32_v_f32m2((const float*)scale_data + i * 8, vl);
 
-
                     for (int j = 0; j < w; j++)
                     {
                         // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
@@ -2247,7 +2247,6 @@ int Dequantize_riscv::forward_fp16sa(const Mat& bottom_blob, Mat& top_blob, cons
                     // float32x4_t _bias1 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + q * 8 + 4);
                     vfloat32m2_t _scale = scale_data_size == 1 ? vfmv_v_f_f32m2(scale_data[0], vl) : vle32_v_f32m2((const float*)scale_data + q * 8, vl);
                     vfloat32m2_t _bias = bias_data_size == 1 ? vfmv_v_f_f32m2(bias_data[0], vl) : vle32_v_f32m2((const float*)bias_data + q * 8, vl);
-
 
                     for (int i = 0; i < size; i++)
                     {

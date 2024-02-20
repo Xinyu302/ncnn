@@ -1258,24 +1258,6 @@ int Convolution_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, const
     int outw = (w - kernel_extent_w) / stride_w + 1;
     int outh = (h - kernel_extent_h) / stride_h + 1;
 
-    bool use_int8_requantize = int8_scale_term > 100;
-    int out_elempack = 1;
-#if __riscv_vector
-    if (opt.use_packing_layout)
-    {
-        if (use_int8_requantize)
-            out_elempack = num_output % 8 == 0 ? 8 : 1;
-        else
-            out_elempack = num_output % 4 == 0 ? 4 : 1;
-    }
-#endif // __riscv_vector
-    size_t out_elemsize = use_int8_requantize ? 1u * out_elempack : 4u * out_elempack;
-#if __riscv_vector && __riscv_zfh
-    if (support_fp16_storage && opt.use_fp16_storage)
-    {
-        out_elemsize = use_int8_requantize ? 1u * out_elempack : 2u * out_elempack;
-    }
-#endif // __riscv_vector && __riscv_zfh
     // if (opt.use_bf16_storage)
     //     out_elemsize = use_int8_requantize ? 1u * out_elempack : 2u * out_elempack;
 
@@ -1296,7 +1278,7 @@ int Convolution_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, const
 #if __riscv_vector
     if (opt.use_packing_layout)
     {
-        out_elempack_int32 = num_output % 8 == 0 ? 8 : num_output % 4 == 0 ? 4 : 1;
+        out_elempack_int32 = num_output % packn == 0 ? packn : 1;
     }
 #endif // __riscv_vector
 
@@ -1326,7 +1308,7 @@ int Convolution_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, const
     }
     else
 #endif
-    if (elempack == packn && out_elempack == packn)
+    if (elempack == packn && out_elempack_int32 == packn)
     {
         if (kernel_w == 1 && kernel_h == 1 && dilation_w == 1 && dilation_h == 1 && stride_w == 1 && stride_h == 1)
         {
@@ -1351,6 +1333,25 @@ int Convolution_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, const
     }
 
     bottom_blob_bordered.release();
+
+    bool use_int8_requantize = int8_scale_term > 100;
+    int out_elempack = 1;
+#if __riscv_vector
+    if (opt.use_packing_layout)
+    {
+        if (use_int8_requantize)
+            out_elempack = num_output % 8 == 0 ? 8 : 1;
+        else
+            out_elempack = num_output % 4 == 0 ? 4 : 1;
+    }
+#endif // __riscv_vector
+    size_t out_elemsize = use_int8_requantize ? 1u * out_elempack : 4u * out_elempack;
+#if __riscv_vector && __riscv_zfh
+    if (support_fp16_storage && opt.use_fp16_storage)
+    {
+        out_elemsize = use_int8_requantize ? 1u * out_elempack : 2u * out_elempack;
+    }
+#endif // __riscv_vector && __riscv_zfh
 
     top_blob.create(outw, outh, num_output / out_elempack, out_elemsize, out_elempack, opt.blob_allocator);
     if (top_blob.empty())

@@ -25,6 +25,10 @@ public:
     Dequantize_riscv();
 
     virtual int forward(const Mat& bottom_blob, Mat& top_blob, const Option& opt) const;
+
+#if __riscv_vector && __riscv_zfh
+    int forward_fp16s(const Mat& bottom_blob, Mat& top_blob, const Option& opt) const;
+#endif // __riscv_vector && __riscv_zfh
 };
 
 } // namespace ncnn

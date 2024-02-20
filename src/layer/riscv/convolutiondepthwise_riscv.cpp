@@ -1516,6 +1516,7 @@ int ConvolutionDepthWise_riscv::forward_int8(const Mat& bottom_blob, Mat& top_bl
     }
 
     bool use_int8_requantize = int8_scale_term > 100;
+    fprintf(stderr, "In 1519 use_int8_requantize = %d\n", use_int8_requantize);
     int out_elempack = 1;
 #if __riscv_vector
     if (opt.use_packing_layout)
@@ -1532,11 +1533,13 @@ int ConvolutionDepthWise_riscv::forward_int8(const Mat& bottom_blob, Mat& top_bl
     {
         out_elemsize = use_int8_requantize ? 1u * out_elempack : 2u * out_elempack;
     }
-    // #endif
-    if (opt.use_bf16_storage)
-        out_elemsize = use_int8_requantize ? 1u * out_elempack : 2u * out_elempack;
+    // // #endif
+    // if (opt.use_bf16_storage)
+    //     out_elemsize = use_int8_requantize ? 1u * out_elempack : 2u * out_elempack;
 
     top_blob.create(outw, outh, num_output / out_elempack, out_elemsize, out_elempack, opt.blob_allocator);
+    fprintf(stderr, "top_blob.dims = %d, top_blob.w = %d, top_blob.h = %d, top_blob.c = %d, top_blob.elempack = %d\n", top_blob.dims, top_blob.w, top_blob.h, top_blob.c, top_blob.elempack);
+    fprintf(stderr, "top_blob.elemsize = %d\n", top_blob.elemsize);
     if (top_blob.empty())
         return -100;
 
@@ -1560,6 +1563,7 @@ int ConvolutionDepthWise_riscv::forward_int8(const Mat& bottom_blob, Mat& top_bl
             out_g_elempack = num_output_g % 4 == 0 ? 4 : 1;
     }
 #endif // __riscv_vector
+    fprintf(stderr, "g_elempack = %d, out_g_elempack = %d\n", g_elempack, out_g_elempack);
 
     // unpacking
     Mat bottom_blob_bordered_unpacked = bottom_blob_bordered;
@@ -1569,6 +1573,7 @@ int ConvolutionDepthWise_riscv::forward_int8(const Mat& bottom_blob, Mat& top_bl
         opt_p.blob_allocator = opt.workspace_allocator;
         convert_packing(bottom_blob_bordered, bottom_blob_bordered_unpacked, g_elempack, opt_p);
     }
+    fprintf(stderr, "bottom_blob_bordered_unpacked %d %d %d %d %d\n", bottom_blob_bordered_unpacked.w, bottom_blob_bordered_unpacked.h, bottom_blob_bordered_unpacked.c, bottom_blob_bordered_unpacked.elempack, bottom_blob_bordered_unpacked.elemsize);
 
     Mat top_blob_unpacked = top_blob;
     if (out_g_elempack < out_elempack)
@@ -1581,8 +1586,17 @@ int ConvolutionDepthWise_riscv::forward_int8(const Mat& bottom_blob, Mat& top_bl
     #pragma omp parallel for num_threads(opt.num_threads)
     for (int g = 0; g < group; g++)
     {
+        fprintf(stderr, "in here!\n");
         const Mat bottom_blob_bordered_g = bottom_blob_bordered_unpacked.channel_range(channels_g * g / g_elempack, channels_g / g_elempack);
+        const int8_t *bottom_blob_bordered_g_data = bottom_blob_bordered_g;
+        for (int i = 0; i < bottom_blob_bordered_g.total(); i++)
+        {
+            fprintf(stderr, "%d ", bottom_blob_bordered_g_data[i]);
+        }
         Mat top_blob_g = top_blob_unpacked.channel_range(num_output_g * g / out_g_elempack, num_output_g / out_g_elempack);
+        fprintf(stderr, "top_blob_g.data = %p\n", top_blob_g.data);
+        fprintf(stderr, "top_blob_unpacked.data = %p\n", top_blob_unpacked.data);
+        fprintf(stderr, "channel_range args = %d, %d\n", num_output_g * g / out_g_elempack, num_output_g / out_g_elempack);
 
         const ncnn::Layer* op = group_ops[g];
 
@@ -1591,16 +1605,42 @@ int ConvolutionDepthWise_riscv::forward_int8(const Mat& bottom_blob, Mat& top_bl
 
         // forward
         op->forward(bottom_blob_bordered_g, top_blob_g, opt_g);
-    }
+        const float *top_blob_g_data = top_blob_g;
+        for (int i = 0; i < top_blob_g.total(); i++)
+        {
+            fprintf(stderr, "%f ", top_blob_g_data[i]);
+        }
+        fprintf(stderr, "group_ops[%d]->forward\n", g);
+        fprintf(stderr, "top_blob_g.dims = %d, top_blob_g.w = %d, top_blob_g.h = %d, top_blob_g.c = %d, top_blob_g.elempack = %d\n", top_blob_g.dims, top_blob_g.w, top_blob_g.h, top_blob_g.c, top_blob_g.elempack);
+        fprintf(stderr, "top_blob_g.data = %p\n", top_blob_g.data);
+        fprintf(stderr, "top_blob_unpacked.data = %p\n", top_blob_unpacked.data);
 
+
+    }
+    fprintf(stderr, "top_blob_unpacked.dims = %d,top_blob_unpacked.w = %d, top_blob_unpacked.h = %d, top_blob_unpacked.c = %d, top_blob_unpacked.elempack = %d\n", top_blob_unpacked.dims, top_blob_unpacked.w, top_blob_unpacked.h, top_blob_unpacked.c, top_blob_unpacked.elempack);
+    fprintf(stderr, "top_blob.dims = %d, top_blob.w = %d, top_blob.h = %d, top_blob.c = %d, top_blob.elempack = %d\n", top_blob.dims, top_blob.w, top_blob.h, top_blob.c, top_blob.elempack);
+    const float *top_blob_unpacked_data = top_blob_unpacked;
+    for (int i = 0; i < top_blob_unpacked.total(); i++)
+    {
+        fprintf(stderr, "%f ", top_blob_unpacked_data[i]);
+    }
+    fprintf(stderr, "==============================\n");
     // packing
     if (out_g_elempack < out_elempack)
     {
+        fprintf(stderr, "In 1615\n");
         convert_packing(top_blob_unpacked, top_blob, out_elempack, opt);
     }
     else
     {
+        fprintf(stderr, "In 1620\n");
         top_blob = top_blob_unpacked;
+    }
+    const float *top_blob_data = top_blob;
+    fprintf(stderr, "==============================\n");
+    for (int i = 0; i < top_blob.total(); i++)
+    {
+        fprintf(stderr, "%f ", top_blob_data[i]);
     }
 
     return 0;

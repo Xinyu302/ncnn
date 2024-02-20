@@ -1259,27 +1259,6 @@ int Convolution_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, const
     }
 
     bottom_blob_bordered.release();
-    fprintf(stderr, "check in convolution_riscv.cpp\n");
-
-    if (top_blob.w != outw) {
-        fprintf(stderr, "top_blob.w != outw\n");
-    }
-    if (top_blob.h != outh) {
-        fprintf(stderr, "top_blob.h != outh\n");
-    }
-    if (top_blob.c != num_output / out_elempack) {
-        fprintf(stderr, "top_blob.c != num_output / out_elempack\n");
-    }
-    if (top_blob.elemsize != out_elemsize) {
-        fprintf(stderr, "top_blob.elemsize != out_elemsize\n");
-    }
-    if (top_blob.elempack != out_elempack) {
-        fprintf(stderr, "top_blob.elempack != out_elempack\n");
-    }
-    if (top_blob.allocator != opt.blob_allocator) {
-        fprintf(stderr, "top_blob.allocator != opt.blob_allocator\n");
-    }
-
 
     top_blob.create(outw, outh, num_output / out_elempack, out_elemsize, out_elempack, opt.blob_allocator);
     if (top_blob.empty())

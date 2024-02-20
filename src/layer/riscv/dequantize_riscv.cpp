@@ -43,7 +43,6 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
 
     if (support_fp16_storage && opt.use_fp16_storage) 
     {
-        fprintf(stderr, "Dequantize_riscv::forward_fp16s is called\n");
         return forward_fp16s(bottom_blob, top_blob, opt);
     }
 

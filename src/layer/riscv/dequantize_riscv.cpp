@@ -43,7 +43,13 @@ int Dequantize_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Optio
 
     if (support_fp16_storage && opt.use_fp16_storage) 
     {
-        return forward_fp16s(bottom_blob, top_blob, opt);
+        if (opt.use_fp16_arithmetic)
+        {
+            return forward_fp16sa(bottom_blob, top_blob, opt);
+        } else 
+        {
+            return forward_fp16s(bottom_blob, top_blob, opt);
+        }
     }
 
 #if __riscv_vector
@@ -1951,6 +1957,811 @@ int Dequantize_riscv::forward_fp16s(const Mat& bottom_blob, Mat& top_blob, const
                     vse16_v_f16m4(ptr + offset, vfncvt_f_f_w_f16m4(_v, vl), vl);
                     offset += vl;
                     n -= vl;
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+
+int Dequantize_riscv::forward_fp16sa(const Mat& bottom_blob, Mat& top_blob, const Option& opt) const
+{
+    int dims = bottom_blob.dims;
+    int elempack = bottom_blob.elempack;
+    int vl;
+
+    if (elempack == 8)
+    {
+        vl = 8;
+        if (dims == 1)
+        {
+            int w = bottom_blob.w;
+
+            top_blob.create(w, (size_t)16u, elempack, opt.blob_allocator);
+            if (top_blob.empty())
+                return -100;
+
+            if (scale_data_size == 1)
+            {
+                // float32x4_t _scale = vdupq_n_f32(scale_data[0]);
+                vfloat32m2_t _scale = vfmv_v_f_f32m2(scale_data[0], vl);
+
+                if (bias_data_size == 0)
+                {
+                    #pragma omp parallel for num_threads(opt.num_threads)
+                    for (int i = 0; i < w; i++)
+                    {
+                        const int* intptr = (const int*)bottom_blob + i * 8;
+                        __fp16* ptr = (__fp16*)top_blob + i * 8;
+
+                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
+                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
+                        // _v0 = vmulq_f32(_v0, _scale);
+                        // _v1 = vmulq_f32(_v1, _scale);
+                        // vst1q_f16(ptr, vcombine_f16(vcvt_f16_f32(_v0), vcvt_f16_f32(_v1)));
+                        vl = 8;
+                        vfloat32m2_t _v = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
+                        _v = vfmul_vv_f32m2(_v, _scale, vl);
+                        vse16_v_f16m1(ptr, vfncvt_f_f_w_f16m1(_v, vl), vl);
+                    }
+                }
+                else if (bias_data_size == 1)
+                {
+                    // float32x4_t _bias = vdupq_n_f32(bias_data[0]);
+                    vfloat32m2_t _bias = vfmv_v_f_f32m2(bias_data[0], vl);
+
+                    #pragma omp parallel for num_threads(opt.num_threads)
+                    for (int i = 0; i < w; i++)
+                    {
+                        const int* intptr = (const int*)bottom_blob + i * 8;
+                        __fp16* ptr = (__fp16*)top_blob + i * 8;
+
+                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
+                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
+                        // _v0 = vfmaq_f32(_bias, _v0, _scale);
+                        // _v1 = vfmaq_f32(_bias, _v1, _scale);
+                        // vst1q_f16(ptr, vcombine_f16(vcvt_f16_f32(_v0), vcvt_f16_f32(_v1)));
+                        vfloat32m2_t _v = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
+                        _v = vfmacc_vv_f32m2(_bias, _v, _scale, vl);
+                        vse16_v_f16m1(ptr, vfncvt_f_f_w_f16m1(_v, vl), vl);
+                    }
+                }
+                else
+                {
+                    #pragma omp parallel for num_threads(opt.num_threads)
+                    for (int i = 0; i < w; i++)
+                    {
+                        const int* intptr = (const int*)bottom_blob + i * 8;
+                        __fp16* ptr = (__fp16*)top_blob + i * 8;
+
+                        // float32x4_t _bias0 = vld1q_f32((const float*)bias_data + i * 8);
+                        // float32x4_t _bias1 = vld1q_f32((const float*)bias_data + i * 8 + 4);
+                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
+                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
+                        // _v0 = vfmaq_f32(_bias0, _v0, _scale);
+                        // _v1 = vfmaq_f32(_bias1, _v1, _scale);
+                        // vst1q_f16(ptr, vcombine_f16(vcvt_f16_f32(_v0), vcvt_f16_f32(_v1)));
+                        vfloat32m2_t _bias = vle32_v_f32m2((const float*)bias_data + i * 8, vl);
+                        vfloat32m2_t _v = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
+                        _v = vfmacc_vv_f32m2(_bias, _v, _scale, vl);
+                        vse16_v_f16m1(ptr, vfncvt_f_f_w_f16m1(_v, vl), vl);
+                    }
+                }
+            }
+            else
+            {
+                if (bias_data_size == 0)
+                {
+                    #pragma omp parallel for num_threads(opt.num_threads)
+                    for (int i = 0; i < w; i++)
+                    {
+                        const int* intptr = (const int*)bottom_blob + i * 8;
+                        __fp16* ptr = (__fp16*)top_blob + i * 8;
+
+                        // float32x4_t _scale0 = vld1q_f32((const float*)scale_data + i * 8);
+                        // float32x4_t _scale1 = vld1q_f32((const float*)scale_data + i * 8 + 4);
+                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
+                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
+                        // _v0 = vmulq_f32(_v0, _scale0);
+                        // _v1 = vmulq_f32(_v1, _scale1);
+                        // vst1q_f16(ptr, vcombine_f16(vcvt_f16_f32(_v0), vcvt_f16_f32(_v1)));
+                        vfloat32m2_t _scale = vle32_v_f32m2((const float*)scale_data + i * 8, vl);
+                        vfloat32m2_t _v = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
+                        _v = vfmul_vv_f32m2(_v, _scale, vl);
+                        vse16_v_f16m1(ptr, vfncvt_f_f_w_f16m1(_v, vl), vl);
+                    }
+                }
+                else if (bias_data_size == 1)
+                {
+                    // float32x4_t _bias = vdupq_n_f32(bias_data[0]);
+                    vfloat32m2_t _bias = vfmv_v_f_f32m2(bias_data[0], vl);
+
+                    #pragma omp parallel for num_threads(opt.num_threads)
+                    for (int i = 0; i < w; i++)
+                    {
+                        const int* intptr = (const int*)bottom_blob + i * 8;
+                        __fp16* ptr = (__fp16*)top_blob + i * 8;
+
+                        // float32x4_t _scale0 = vld1q_f32((const float*)scale_data + i * 8);
+                        // float32x4_t _scale1 = vld1q_f32((const float*)scale_data + i * 8 + 4);
+                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
+                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
+                        // _v0 = vfmaq_f32(_bias, _v0, _scale0);
+                        // _v1 = vfmaq_f32(_bias, _v1, _scale1);
+                        // vst1q_f16(ptr, vcombine_f16(vcvt_f16_f32(_v0), vcvt_f16_f32(_v1)));
+                        vfloat32m2_t _scale = vle32_v_f32m2((const float*)scale_data + i * 8, vl);
+                        vfloat32m2_t _v = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
+                        _v = vfmacc_vv_f32m2(_bias, _v, _scale, vl);
+                        vse16_v_f16m1(ptr, vfncvt_f_f_w_f16m1(_v, vl), vl);
+                    }
+                }
+                else
+                {
+                    #pragma omp parallel for num_threads(opt.num_threads)
+                    for (int i = 0; i < w; i++)
+                    {
+                        const int* intptr = (const int*)bottom_blob + i * 8;
+                        __fp16* ptr = (__fp16*)top_blob + i * 8;
+
+                        // float32x4_t _scale0 = vld1q_f32((const float*)scale_data + i * 8);
+                        // float32x4_t _scale1 = vld1q_f32((const float*)scale_data + i * 8 + 4);
+                        // float32x4_t _bias0 = vld1q_f32((const float*)bias_data + i * 8);
+                        // float32x4_t _bias1 = vld1q_f32((const float*)bias_data + i * 8 + 4);
+                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
+                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
+                        // _v0 = vfmaq_f32(_bias0, _v0, _scale0);
+                        // _v1 = vfmaq_f32(_bias1, _v1, _scale1);
+                        // vst1q_f16(ptr, vcombine_f16(vcvt_f16_f32(_v0), vcvt_f16_f32(_v1)));
+                        vfloat32m2_t _scale = vle32_v_f32m2((const float*)scale_data + i * 8, vl);
+                        vfloat32m2_t _bias = vle32_v_f32m2((const float*)bias_data + i * 8, vl);
+                        vfloat32m2_t _v = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
+                        _v = vfmacc_vv_f32m2(_bias, _v, _scale, vl);
+                        vse16_v_f16m1(ptr, vfncvt_f_f_w_f16m1(_v, vl), vl);
+                    }
+                }
+            }
+        }
+
+        if (dims == 2)
+        {
+            int w = bottom_blob.w;
+            int h = bottom_blob.h;
+
+            top_blob.create(w, h, (size_t)16u, elempack, opt.blob_allocator);
+            if (top_blob.empty())
+                return -100;
+
+            if (bias_data_size == 0)
+            {
+                #pragma omp parallel for num_threads(opt.num_threads)
+                for (int i = 0; i < h; i++)
+                {
+                    const int* intptr = bottom_blob.row<const int>(i);
+                    __fp16* ptr = top_blob.row<__fp16>(i);
+
+                    // float32x4_t _scale0 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + i * 8);
+                    // float32x4_t _scale1 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + i * 8 + 4);
+                    vfloat32m2_t _scale0 = scale_data_size == 1 ? vfmv_v_f_f32m2(scale_data[0], vl) : vle32_v_f32m2((const float*)scale_data + i * 8, vl);
+
+
+                    for (int j = 0; j < w; j++)
+                    {
+                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
+                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
+                        // _v0 = vmulq_f32(_v0, _scale0);
+                        // _v1 = vmulq_f32(_v1, _scale1);
+                        // vst1q_f16(ptr, vcombine_f16(vcvt_f16_f32(_v0), vcvt_f16_f32(_v1)));
+                        vfloat32m2_t _v = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
+                        _v = vfmul_vv_f32m2(_v, _scale0, vl);
+                        vse16_v_f16m1(ptr, vfncvt_f_f_w_f16m1(_v, vl), vl);
+
+                        intptr += 8;
+                        ptr += 8;
+                    }
+                }
+            }
+            else
+            {
+                #pragma omp parallel for num_threads(opt.num_threads)
+                for (int i = 0; i < h; i++)
+                {
+                    const int* intptr = bottom_blob.row<const int>(i);
+                    __fp16* ptr = top_blob.row<__fp16>(i);
+
+                    // float32x4_t _scale0 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + i * 8);
+                    // float32x4_t _scale1 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + i * 8 + 4);
+                    // float32x4_t _bias0 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + i * 8);
+                    // float32x4_t _bias1 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + i * 8 + 4);
+                    vfloat32m2_t _scale = scale_data_size == 1 ? vfmv_v_f_f32m2(scale_data[0], vl) : vle32_v_f32m2((const float*)scale_data + i * 8, vl);
+                    vfloat32m2_t _bias = bias_data_size == 1 ? vfmv_v_f_f32m2(bias_data[0], vl) : vle32_v_f32m2((const float*)bias_data + i * 8, vl);
+
+                    for (int j = 0; j < w; j++)
+                    {
+                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
+                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
+                        // _v0 = vfmaq_f32(_bias0, _v0, _scale0);
+                        // _v1 = vfmaq_f32(_bias1, _v1, _scale1);
+                        // vst1q_f16(ptr, vcombine_f16(vcvt_f16_f32(_v0), vcvt_f16_f32(_v1)));
+                        vfloat32m2_t _v = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
+                        _v = vfmacc_vv_f32m2(_bias, _v, _scale, vl);
+                        vse16_v_f16m1(ptr, vfncvt_f_f_w_f16m1(_v, vl), vl);
+
+                        intptr += 8;
+                        ptr += 8;
+                    }
+                }
+            }
+        }
+
+        if (dims == 3)
+        {
+            int w = bottom_blob.w;
+            int h = bottom_blob.h;
+            int channels = bottom_blob.c;
+            int size = w * h;
+
+            top_blob.create(w, h, channels, (size_t)16u, elempack, opt.blob_allocator);
+            if (top_blob.empty())
+                return -100;
+
+            if (bias_data_size == 0)
+            {
+                #pragma omp parallel for num_threads(opt.num_threads)
+                for (int q = 0; q < channels; q++)
+                {
+                    const int* intptr = bottom_blob.channel(q);
+                    __fp16* ptr = top_blob.channel(q);
+
+                    // float32x4_t _scale0 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + q * 8);
+                    // float32x4_t _scale1 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + q * 8 + 4);
+                    vfloat32m2_t _scale0 = scale_data_size == 1 ? vfmv_v_f_f32m2(scale_data[0], vl) : vle32_v_f32m2((const float*)scale_data + q * 8, vl);
+
+                    for (int i = 0; i < size; i++)
+                    {
+                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
+                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
+                        // _v0 = vmulq_f32(_v0, _scale0);
+                        // _v1 = vmulq_f32(_v1, _scale1);
+                        // vst1q_f16(ptr, vcombine_f16(vcvt_f16_f32(_v0), vcvt_f16_f32(_v1)));
+
+                        vfloat32m2_t _v = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
+                        _v = vfmul_vv_f32m2(_v, _scale0, vl);
+                        vse16_v_f16m1(ptr, vfncvt_f_f_w_f16m1(_v, vl), vl);
+
+                        intptr += 8;
+                        ptr += 8;
+                    }
+                }
+            }
+            else
+            {
+                #pragma omp parallel for num_threads(opt.num_threads)
+                for (int q = 0; q < channels; q++)
+                {
+                    const int* intptr = bottom_blob.channel(q);
+                    __fp16* ptr = top_blob.channel(q);
+
+                    // float32x4_t _scale0 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + q * 8);
+                    // float32x4_t _scale1 = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + q * 8 + 4);
+                    // float32x4_t _bias0 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + q * 8);
+                    // float32x4_t _bias1 = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + q * 8 + 4);
+                    vfloat32m2_t _scale = scale_data_size == 1 ? vfmv_v_f_f32m2(scale_data[0], vl) : vle32_v_f32m2((const float*)scale_data + q * 8, vl);
+                    vfloat32m2_t _bias = bias_data_size == 1 ? vfmv_v_f_f32m2(bias_data[0], vl) : vle32_v_f32m2((const float*)bias_data + q * 8, vl);
+
+
+                    for (int i = 0; i < size; i++)
+                    {
+                        // float32x4_t _v0 = vcvtq_f32_s32(vld1q_s32(intptr));
+                        // float32x4_t _v1 = vcvtq_f32_s32(vld1q_s32(intptr + 4));
+                        // _v0 = vfmaq_f32(_bias0, _v0, _scale0);
+                        // _v1 = vfmaq_f32(_bias1, _v1, _scale1);
+                        // vst1q_f16(ptr, vcombine_f16(vcvt_f16_f32(_v0), vcvt_f16_f32(_v1)));
+                        vfloat32m2_t _v = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
+                        _v = vfmacc_vv_f32m2(_bias, _v, _scale, vl);
+                        vse16_v_f16m1(ptr, vfncvt_f_f_w_f16m1(_v, vl), vl);
+
+                        intptr += 8;
+                        ptr += 8;
+                    }
+                }
+            }
+        }
+
+        return 0;
+    }
+
+    if (elempack == 4)
+    {
+        vl = 4;
+        if (dims == 1)
+        {
+            int w = bottom_blob.w;
+
+            top_blob.create(w, (size_t)8u, elempack, opt.blob_allocator);
+            if (top_blob.empty())
+                return -100;
+
+            if (scale_data_size == 1)
+            {
+                // float32x4_t _scale = vdupq_n_f32(scale_data[0]);
+                vfloat32m2_t _scale = vfmv_v_f_f32m2(scale_data[0], vl);
+
+                if (bias_data_size == 0)
+                {
+                    #pragma omp parallel for num_threads(opt.num_threads)
+                    for (int i = 0; i < w; i++)
+                    {
+                        const int* intptr = (const int*)bottom_blob + i * 4;
+                        __fp16* ptr = (__fp16*)top_blob + i * 4;
+
+                        // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
+                        // _v = vmulq_f32(_v, _scale);
+                        // vst1_f16(ptr, vcvt_f16_f32(_v));
+                        vfloat32m2_t _v = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
+                        _v = vfmul_vv_f32m2(_v, _scale, vl);
+                        vse16_v_f16m1(ptr, vfncvt_f_f_w_f16m1(_v, vl), vl);
+                    }
+                }
+                else if (bias_data_size == 1)
+                {
+                    // float32x4_t _bias = vdupq_n_f32(bias_data[0]);
+                    vfloat32m2_t _bias = vfmv_v_f_f32m2(bias_data[0], vl);
+
+                    #pragma omp parallel for num_threads(opt.num_threads)
+                    for (int i = 0; i < w; i++)
+                    {
+                        const int* intptr = (const int*)bottom_blob + i * 4;
+                        __fp16* ptr = (__fp16*)top_blob + i * 4;
+
+                        // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
+                        // _v = vfmaq_f32(_bias, _v, _scale);
+                        // vst1_f16(ptr, vcvt_f16_f32(_v));
+                        vfloat32m2_t _v = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
+                        _v = vfmacc_vv_f32m2(_bias, _v, _scale, vl);
+                        vse16_v_f16m1(ptr, vfncvt_f_f_w_f16m1(_v, vl), vl);
+                    }
+                }
+                else
+                {
+                    #pragma omp parallel for num_threads(opt.num_threads)
+                    for (int i = 0; i < w; i++)
+                    {
+                        const int* intptr = (const int*)bottom_blob + i * 4;
+                        __fp16* ptr = (__fp16*)top_blob + i * 4;
+
+                        // float32x4_t _bias = vld1q_f32((const float*)bias_data + i * 4);
+                        // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
+                        // _v = vfmaq_f32(_bias, _v, _scale);
+                        // vst1_f16(ptr, vcvt_f16_f32(_v));
+                        vfloat32m2_t _bias = vle32_v_f32m2((const float*)bias_data + i * 4, vl);
+                        vfloat32m2_t _v = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
+                        _v = vfmacc_vv_f32m2(_bias, _v, _scale, vl);
+                        vse16_v_f16m1(ptr, vfncvt_f_f_w_f16m1(_v, vl), vl);
+                    }
+                }
+            }
+            else
+            {
+                if (bias_data_size == 0)
+                {
+                    #pragma omp parallel for num_threads(opt.num_threads)
+                    for (int i = 0; i < w; i++)
+                    {
+                        const int* intptr = (const int*)bottom_blob + i * 4;
+                        __fp16* ptr = (__fp16*)top_blob + i * 4;
+
+                        // float32x4_t _scale = vld1q_f32((const float*)scale_data + i * 4);
+                        // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
+                        // _v = vmulq_f32(_v, _scale);
+                        // vst1_f16(ptr, vcvt_f16_f32(_v));
+                        vfloat32m2_t _scale = vle32_v_f32m2((const float*)scale_data + i * 4, vl);
+                        vfloat32m2_t _v = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
+                        _v = vfmul_vv_f32m2(_v, _scale, vl);
+                        vse16_v_f16m1(ptr, vfncvt_f_f_w_f16m1(_v, vl), vl);
+                    }
+                }
+                else if (bias_data_size == 1)
+                {
+                    // float32x4_t _bias = vdupq_n_f32(bias_data[0]);
+                    vfloat32m2_t _bias = vfmv_v_f_f32m2(bias_data[0], vl);
+
+                    #pragma omp parallel for num_threads(opt.num_threads)
+                    for (int i = 0; i < w; i++)
+                    {
+                        const int* intptr = (const int*)bottom_blob + i * 4;
+                        __fp16* ptr = (__fp16*)top_blob + i * 4;
+
+                        // float32x4_t _scale = vld1q_f32((const float*)scale_data + i * 4);
+                        // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
+                        // _v = vfmaq_f32(_bias, _v, _scale);
+                        // vst1_f16(ptr, vcvt_f16_f32(_v));
+                        vfloat32m2_t _scale = vle32_v_f32m2((const float*)scale_data + i * 4, vl);
+                        vfloat32m2_t _v = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
+                        _v = vfmacc_vv_f32m2(_bias, _v, _scale, vl);
+                        vse16_v_f16m1(ptr, vfncvt_f_f_w_f16m1(_v, vl), vl);
+                    }
+                }
+                else
+                {
+                    #pragma omp parallel for num_threads(opt.num_threads)
+                    for (int i = 0; i < w; i++)
+                    {
+                        const int* intptr = (const int*)bottom_blob + i * 4;
+                        __fp16* ptr = (__fp16*)top_blob + i * 4;
+
+                        // float32x4_t _scale = vld1q_f32((const float*)scale_data + i * 4);
+                        // float32x4_t _bias = vld1q_f32((const float*)bias_data + i * 4);
+                        // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
+                        // _v = vfmaq_f32(_bias, _v, _scale);
+                        // vst1_f16(ptr, vcvt_f16_f32(_v));
+                        vfloat32m2_t _scale = vle32_v_f32m2((const float*)scale_data + i * 4, vl);
+                        vfloat32m2_t _bias = vle32_v_f32m2((const float*)bias_data + i * 4, vl);
+                        vfloat32m2_t _v = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
+                        _v = vfmacc_vv_f32m2(_bias, _v, _scale, vl);
+                        vse16_v_f16m1(ptr, vfncvt_f_f_w_f16m1(_v, vl), vl);
+                    }
+                }
+            }
+        }
+
+        if (dims == 2)
+        {
+            int w = bottom_blob.w;
+            int h = bottom_blob.h;
+
+            top_blob.create(w, h, (size_t)8u, elempack, opt.blob_allocator);
+            if (top_blob.empty())
+                return -100;
+
+            if (bias_data_size == 0)
+            {
+                #pragma omp parallel for num_threads(opt.num_threads)
+                for (int i = 0; i < h; i++)
+                {
+                    const int* intptr = bottom_blob.row<const int>(i);
+                    __fp16* ptr = top_blob.row<__fp16>(i);
+
+                    // float32x4_t _scale = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + i * 4);
+                    vfloat32m2_t _scale = scale_data_size == 1 ? vfmv_v_f_f32m2(scale_data[0], vl) : vle32_v_f32m2((const float*)scale_data + i * 4, vl);
+
+                    for (int j = 0; j < w; j++)
+                    {
+                        // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
+                        // _v = vmulq_f32(_v, _scale);
+                        // vst1_f16(ptr, vcvt_f16_f32(_v));
+                        vfloat32m2_t _v = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
+                        _v = vfmul_vv_f32m2(_v, _scale, vl);
+                        vse16_v_f16m1(ptr, vfncvt_f_f_w_f16m1(_v, vl), vl);
+
+                        intptr += 4;
+                        ptr += 4;
+                    }
+                }
+            }
+            else
+            {
+                #pragma omp parallel for num_threads(opt.num_threads)
+                for (int i = 0; i < h; i++)
+                {
+                    const int* intptr = bottom_blob.row<const int>(i);
+                    __fp16* ptr = top_blob.row<__fp16>(i);
+
+                    // float32x4_t _scale = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + i * 4);
+                    // float32x4_t _bias = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + i * 4);
+                    vfloat32m2_t _scale = scale_data_size == 1 ? vfmv_v_f_f32m2(scale_data[0], vl) : vle32_v_f32m2((const float*)scale_data + i * 4, vl);
+                    vfloat32m2_t _bias = bias_data_size == 1 ? vfmv_v_f_f32m2(bias_data[0], vl) : vle32_v_f32m2((const float*)bias_data + i * 4, vl);
+
+                    for (int j = 0; j < w; j++)
+                    {
+                        // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
+                        // _v = vfmaq_f32(_bias, _v, _scale);
+                        // vst1_f16(ptr, vcvt_f16_f32(_v));
+                        vfloat32m2_t _v = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
+                        _v = vfmacc_vv_f32m2(_bias, _v, _scale, vl);
+                        vse16_v_f16m1(ptr, vfncvt_f_f_w_f16m1(_v, vl), vl);
+
+                        intptr += 4;
+                        ptr += 4;
+                    }
+                }
+            }
+        }
+
+        if (dims == 3)
+        {
+            int w = bottom_blob.w;
+            int h = bottom_blob.h;
+            int channels = bottom_blob.c;
+            int size = w * h;
+
+            top_blob.create(w, h, channels, (size_t)8u, elempack, opt.blob_allocator);
+            if (top_blob.empty())
+                return -100;
+
+            if (bias_data_size == 0)
+            {
+                #pragma omp parallel for num_threads(opt.num_threads)
+                for (int q = 0; q < channels; q++)
+                {
+                    const int* intptr = bottom_blob.channel(q);
+                    __fp16* ptr = top_blob.channel(q);
+
+                    // float32x4_t _scale = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + q * 4);
+                    vfloat32m2_t _scale = scale_data_size == 1 ? vfmv_v_f_f32m2(scale_data[0], vl) : vle32_v_f32m2((const float*)scale_data + q * 4, vl);
+
+                    for (int i = 0; i < size; i++)
+                    {
+                        // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
+                        // _v = vmulq_f32(_v, _scale);
+                        // vst1_f16(ptr, vcvt_f16_f32(_v));
+                        vfloat32m2_t _v = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
+                        _v = vfmul_vv_f32m2(_v, _scale, vl);
+                        vse16_v_f16m1(ptr, vfncvt_f_f_w_f16m1(_v, vl), vl);
+
+                        intptr += 4;
+                        ptr += 4;
+                    }
+                }
+            }
+            else
+            {
+                #pragma omp parallel for num_threads(opt.num_threads)
+                for (int q = 0; q < channels; q++)
+                {
+                    const int* intptr = bottom_blob.channel(q);
+                    __fp16* ptr = top_blob.channel(q);
+
+                    // float32x4_t _scale = scale_data_size == 1 ? vdupq_n_f32(scale_data[0]) : vld1q_f32((const float*)scale_data + q * 4);
+                    // float32x4_t _bias = bias_data_size == 1 ? vdupq_n_f32(bias_data[0]) : vld1q_f32((const float*)bias_data + q * 4);
+                    vfloat32m2_t _scale = scale_data_size == 1 ? vfmv_v_f_f32m2(scale_data[0], vl) : vle32_v_f32m2((const float*)scale_data + q * 4, vl);
+                    vfloat32m2_t _bias = bias_data_size == 1 ? vfmv_v_f_f32m2(bias_data[0], vl) : vle32_v_f32m2((const float*)bias_data + q * 4, vl);
+
+                    for (int i = 0; i < size; i++)
+                    {
+                        // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
+                        // _v = vfmaq_f32(_bias, _v, _scale);
+                        // vst1_f16(ptr, vcvt_f16_f32(_v));
+                        vfloat32m2_t _v = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
+                        _v = vfmacc_vv_f32m2(_bias, _v, _scale, vl);
+                        vse16_v_f16m1(ptr, vfncvt_f_f_w_f16m1(_v, vl), vl);
+
+                        intptr += 4;
+                        ptr += 4;
+                    }
+                }
+            }
+        }
+
+        return 0;
+    }
+
+    if (dims == 1)
+    {
+        int w = bottom_blob.w;
+
+        top_blob.create(w, (size_t)2u, opt.blob_allocator);
+        if (top_blob.empty())
+            return -100;
+
+        const int* intptr = bottom_blob;
+        __fp16* ptr = top_blob;
+
+        if (scale_data_size == 1)
+        {
+            const float scale = scale_data[0];
+
+            if (bias_data_size == 0)
+            {
+                #pragma omp parallel for num_threads(opt.num_threads)
+                for (int i = 0; i < w; i++)
+                {
+                    ptr[i] = (__fp16)(intptr[i] * scale);
+                }
+            }
+            else if (bias_data_size == 1)
+            {
+                const float bias = bias_data[0];
+
+                #pragma omp parallel for num_threads(opt.num_threads)
+                for (int i = 0; i < w; i++)
+                {
+                    ptr[i] = (__fp16)(intptr[i] * scale + bias);
+                }
+            }
+            else
+            {
+                #pragma omp parallel for num_threads(opt.num_threads)
+                for (int i = 0; i < w; i++)
+                {
+                    ptr[i] = (__fp16)(intptr[i] * scale + bias_data[i]);
+                }
+            }
+        }
+        else
+        {
+            if (bias_data_size == 0)
+            {
+                #pragma omp parallel for num_threads(opt.num_threads)
+                for (int i = 0; i < w; i++)
+                {
+                    ptr[i] = (__fp16)(intptr[i] * scale_data[i]);
+                }
+            }
+            else if (bias_data_size == 1)
+            {
+                const float bias = bias_data[0];
+
+                #pragma omp parallel for num_threads(opt.num_threads)
+                for (int i = 0; i < w; i++)
+                {
+                    ptr[i] = (__fp16)(intptr[i] * scale_data[i] + bias);
+                }
+            }
+            else
+            {
+                #pragma omp parallel for num_threads(opt.num_threads)
+                for (int i = 0; i < w; i++)
+                {
+                    ptr[i] = (__fp16)(intptr[i] * scale_data[i] + bias_data[i]);
+                }
+            }
+        }
+    }
+
+    if (dims == 2)
+    {
+        int w = bottom_blob.w;
+        int h = bottom_blob.h;
+
+        top_blob.create(w, h, (size_t)2u, opt.blob_allocator);
+        if (top_blob.empty())
+            return -100;
+
+        if (bias_data_size == 0)
+        {
+            #pragma omp parallel for num_threads(opt.num_threads)
+            for (int i = 0; i < h; i++)
+            {
+                const int* intptr = bottom_blob.row<const int>(i);
+                __fp16* ptr = top_blob.row<__fp16>(i);
+
+                const float scale = scale_data_size == 1 ? scale_data[0] : scale_data[i];
+
+                int j = 0;
+                vl = 4;
+                // float32x4_t _scale = vdupq_n_f32(scale);
+                vfloat32m2_t _scale = vfmv_v_f_f32m2(scale, vl);
+                for (; j + 3 < w; j += 4)
+                {
+                    // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
+                    // _v = vmulq_f32(_v, _scale);
+                    // vst1_f16(ptr, vcvt_f16_f32(_v));
+                    vfloat32m2_t _v = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
+                    _v = vfmul_vv_f32m2(_v, _scale, vl);
+                    vse16_v_f16m1(ptr, vfncvt_f_f_w_f16m1(_v, vl), vl);
+
+                    intptr += 4;
+                    ptr += 4;
+                }
+                for (; j < w; j++)
+                {
+                    *ptr++ = (__fp16)(*intptr++ * scale);
+                }
+            }
+        }
+        else
+        {
+            #pragma omp parallel for num_threads(opt.num_threads)
+            for (int i = 0; i < h; i++)
+            {
+                const int* intptr = bottom_blob.row<const int>(i);
+                __fp16* ptr = top_blob.row<__fp16>(i);
+
+                const float scale = scale_data_size == 1 ? scale_data[0] : scale_data[i];
+                const float bias = bias_data_size == 1 ? bias_data[0] : bias_data[i];
+
+                int j = 0;
+                vl = 4;
+                // float32x4_t _scale = vdupq_n_f32(scale);
+                // float32x4_t _bias = vdupq_n_f32(bias);
+                vfloat32m2_t _scale = vfmv_v_f_f32m2(scale, vl);
+                vfloat32m2_t _bias = vfmv_v_f_f32m2(bias, vl);
+                for (; j + 3 < w; j += 4)
+                {
+                    // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
+                    // _v = vfmaq_f32(_bias, _v, _scale);
+                    // vst1_f16(ptr, vcvt_f16_f32(_v));
+                    vfloat32m2_t _v = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
+                    _v = vfmacc_vv_f32m2(_bias, _v, _scale, vl);
+                    vse16_v_f16m1(ptr, vfncvt_f_f_w_f16m1(_v, vl), vl);
+
+                    intptr += 4;
+                    ptr += 4;
+                }
+                for (; j < w; j++)
+                {
+                    *ptr++ = (__fp16)(*intptr++ * scale + bias);
+                }
+            }
+        }
+    }
+
+    if (dims == 3)
+    {
+        int w = bottom_blob.w;
+        int h = bottom_blob.h;
+        int channels = bottom_blob.c;
+        int size = w * h;
+
+        top_blob.create(w, h, channels, (size_t)2u, opt.blob_allocator);
+        if (top_blob.empty())
+            return -100;
+
+        if (bias_data_size == 0)
+        {
+            #pragma omp parallel for num_threads(opt.num_threads)
+            for (int q = 0; q < channels; q++)
+            {
+                const int* intptr = bottom_blob.channel(q);
+                __fp16* ptr = top_blob.channel(q);
+
+                const float scale = scale_data_size == 1 ? scale_data[0] : scale_data[q];
+
+                int i = 0;
+                vl = 4;
+                vfloat32m2_t _scale = vfmv_v_f_f32m2(scale, vl);
+                // float32x4_t _scale = vdupq_n_f32(scale);
+                for (; i + 3 < size; i += 4)
+                {
+                    // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
+                    // _v = vmulq_f32(_v, _scale);
+                    // vst1_f16(ptr, vcvt_f16_f32(_v));
+                    vfloat32m2_t _v = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
+                    _v = vfmul_vv_f32m2(_v, _scale, vl);
+                    vse16_v_f16m1(ptr, vfncvt_f_f_w_f16m1(_v, vl), vl);
+
+                    intptr += 4;
+                    ptr += 4;
+                }
+                for (; i < size; i++)
+                {
+                    *ptr++ = (__fp16)(*intptr++ * scale);
+                }
+            }
+        }
+        else
+        {
+            #pragma omp parallel for num_threads(opt.num_threads)
+            for (int q = 0; q < channels; q++)
+            {
+                const int* intptr = bottom_blob.channel(q);
+                __fp16* ptr = top_blob.channel(q);
+
+                const float scale = scale_data_size == 1 ? scale_data[0] : scale_data[q];
+                const float bias = bias_data_size == 1 ? bias_data[0] : bias_data[q];
+
+                int i = 0;
+                // float32x4_t _scale = vdupq_n_f32(scale);
+                // float32x4_t _bias = vdupq_n_f32(bias);
+                vl = 4;
+                vfloat32m2_t _scale = vfmv_v_f_f32m2(scale, vl);
+                vfloat32m2_t _bias = vfmv_v_f_f32m2(bias, vl);
+                for (; i + 3 < size; i += 4)
+                {
+                    // float32x4_t _v = vcvtq_f32_s32(vld1q_s32(intptr));
+                    // _v = vfmaq_f32(_bias, _v, _scale);
+                    // vst1_f16(ptr, vcvt_f16_f32(_v));
+                    vfloat32m2_t _v = vfcvt_f_x_v_f32m2(vle32_v_i32m2(intptr, vl), vl);
+                    _v = vfmacc_vv_f32m2(_bias, _v, _scale, vl);
+                    vse16_v_f16m1(ptr, vfncvt_f_f_w_f16m1(_v, vl), vl);
+
+                    intptr += 4;
+                    ptr += 4;
+                }
+                for (; i < size; i++)
+                {
+                    *ptr++ = (__fp16)(*intptr++ * scale + bias);
                 }
             }
         }

@@ -96,27 +96,27 @@ static void convolution_im2col_pack_A_tile_bf16_fp16(const Mat& A, Mat& AT, int 
 
         int kk = 0;
 #if __riscv_vector
-            int n = max_kk;
-            while (n > 0)
-            {
-                vl = vsetvl_e16m1(n);
-                vuint16m1_t _r0 = vle16_v_u16m1(p0, vl);
-                vuint16m1_t _r1 = vle16_v_u16m1(p1, vl);
-                vsseg2e16_v_u16m1(pp, _r0, _r1, vl);
-                pp += 2 * vl;
-                p0 += vl;
-                p1 += vl;
-                n -= vl;
-            }
+        int n = max_kk;
+        while (n > 0)
+        {
+            vl = vsetvl_e16m1(n);
+            vuint16m1_t _r0 = vle16_v_u16m1(p0, vl);
+            vuint16m1_t _r1 = vle16_v_u16m1(p1, vl);
+            vsseg2e16_v_u16m1(pp, _r0, _r1, vl);
+            pp += 2 * vl;
+            p0 += vl;
+            p1 += vl;
+            n -= vl;
+        }
 #else
-            for (; kk < max_kk; kk++)
-            {
-                pp[0] = p0[0];
-                pp[1] = p1[0];
-                pp += 2;
-                p0 += 1;
-                p1 += 1;
-            }
+        for (; kk < max_kk; kk++)
+        {
+            pp[0] = p0[0];
+            pp[1] = p1[0];
+            pp += 2;
+            p0 += 1;
+            p1 += 1;
+        }
 #endif // __riscv_vector
     }
     for (; ii < max_ii; ii += 1)
@@ -191,7 +191,6 @@ static void convolution_im2col_input_tile_conv1x1s1d1_bf16_fp16(const Mat& botto
                 vsse16_v_u16m1(pp + 9, 12 * sizeof(unsigned short), _r9, vl);
                 vsse16_v_u16m1(pp + 10, 12 * sizeof(unsigned short), _ra, vl);
                 vsse16_v_u16m1(pp + 11, 12 * sizeof(unsigned short), _rb, vl);
-
 
                 // uint16x8_t _r0 = vld1q_u16(p0);
                 // uint16x8_t _r1 = vld1q_u16(p0 + 8);
@@ -683,7 +682,7 @@ static void convolution_im2col_input_tile_bf16_fp16(const Mat& bottom_blob, Mat&
                 vuint16m1_t _r9 = vle16_v_u16m1(sptr9, vl);
                 vuint16m1_t _ra = vle16_v_u16m1(sptra, vl);
                 vuint16m1_t _rb = vle16_v_u16m1(sptrb, vl);
-                
+
                 vsse16_v_u16m1(pp, 12 * sizeof(unsigned short), _r0, vl);
                 vsse16_v_u16m1(pp + 1, 12 * sizeof(unsigned short), _r1, vl);
                 vsse16_v_u16m1(pp + 2, 12 * sizeof(unsigned short), _r2, vl);

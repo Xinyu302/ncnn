@@ -50,7 +50,7 @@ static void convolution_gemm_transB_packed_tile_fp16sa(const Mat& AT_tile, const
         {
             vl = 8;
             const __fp16* pA = pAT;
-            
+
             vfloat16m1_t _sum0;
             vfloat16m1_t _sum1;
             vfloat16m1_t _sum2;
@@ -197,8 +197,7 @@ static void convolution_gemm_transB_packed_tile_fp16sa(const Mat& AT_tile, const
                     vse16_v_f16m1(outptr0 + 4 * 8, _sum8, vl);
                     vse16_v_f16m1(outptr0 + 4 * 9, _sum9, vl);
                     vse16_v_f16m1(outptr0 + 4 * 10, _suma, vl);
-                    vse16_v_f16m1(outptr0 + 4 * 11, _sumb, vl); 
-
+                    vse16_v_f16m1(outptr0 + 4 * 11, _sumb, vl);
 
                     vse16_v_f16m1(outptr0 + out_hstep * 4, vslidedown_vx_f16m1(_sum0, _sum0, 4, vl), vl);
                     vse16_v_f16m1(outptr0 + out_hstep * 4 + 4, vslidedown_vx_f16m1(_sum1, _sum1, 4, vl), vl);
@@ -211,8 +210,7 @@ static void convolution_gemm_transB_packed_tile_fp16sa(const Mat& AT_tile, const
                     vse16_v_f16m1(outptr0 + out_hstep * 4 + 4 * 8, vslidedown_vx_f16m1(_sum8, _sum8, 4, vl), vl);
                     vse16_v_f16m1(outptr0 + out_hstep * 4 + 4 * 9, vslidedown_vx_f16m1(_sum9, _sum9, 4, vl), vl);
                     vse16_v_f16m1(outptr0 + out_hstep * 4 + 4 * 10, vslidedown_vx_f16m1(_suma, _suma, 4, vl), vl);
-                    vse16_v_f16m1(outptr0 + out_hstep * 4 + 4 * 11, vslidedown_vx_f16m1(_sumb, _sumb, 4, vl), vl); 
-
+                    vse16_v_f16m1(outptr0 + out_hstep * 4 + 4 * 11, vslidedown_vx_f16m1(_sumb, _sumb, 4, vl), vl);
 
                     // vst1_f16(outptr0, vget_low_f16(_sum0));
                     // vst1_f16(outptr0 + 4, vget_low_f16(_sum1));
@@ -383,7 +381,7 @@ static void convolution_gemm_transB_packed_tile_fp16sa(const Mat& AT_tile, const
                 _sum4 = vle16_v_f16m1(outptr + 8 * 4, vl);
                 _sum5 = vle16_v_f16m1(outptr + 8 * 5, vl);
                 _sum6 = vle16_v_f16m1(outptr + 8 * 6, vl);
-                _sum7 = vle16_v_f16m1(outptr + 8 * 7, vl);                
+                _sum7 = vle16_v_f16m1(outptr + 8 * 7, vl);
                 // _sum0 = vld1q_f16(outptr);
                 // _sum1 = vld1q_f16(outptr + 8);
                 // _sum2 = vld1q_f16(outptr + 8 * 2);
@@ -695,7 +693,6 @@ static void convolution_gemm_transB_packed_tile_fp16sa(const Mat& AT_tile, const
             vfloat16m1_t _sum0;
             vfloat16m1_t _sum1;
 
-
             if (k == 0)
             {
                 if (pC)
@@ -906,7 +903,7 @@ static void convolution_gemm_transB_packed_tile_fp16sa(const Mat& AT_tile, const
         {
             vl = 4;
             vfloat16m1_t _sum0;
-            vfloat16m1_t _sum1; 
+            vfloat16m1_t _sum1;
             vfloat16m1_t _sum2;
             vfloat16m1_t _sum3;
             vfloat16m1_t _sum4;

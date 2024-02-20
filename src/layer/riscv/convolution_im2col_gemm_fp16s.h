@@ -19,6 +19,12 @@ static void convolution_gemm_transB_packed_tile_fp16sa(const Mat& AT_tile, const
     // NCNN_LOGE("convolution_gemm_transB_packed_tile_fp16sa %d %d %d %d %d %d", i, max_ii, j, max_jj, k, max_kk);
 
     const int out_elempack = top_blob.elempack;
+    // fprintf(stderr, "out_elempack = %d\n", out_elempack);
+    // fprintf(stderr, "AT_tile.w = %d\n", AT_tile.w);
+    // fprintf(stderr, "AT_tile.h = %d\n", AT_tile.h);
+    // fprintf(stderr, "BT_tile.w = %d\n", BT_tile.w);
+    // fprintf(stderr, "BT_tile.h = %d\n", BT_tile.h);
+    // fprintf(stderr, "i = %d, j = %d, max_ii = %d, max_jj = %d, k = %d, max_kk = %d, k_end = %d\n", i, j, max_ii, max_jj, k, max_kk, k_end);
     const int out_hstep = (int)top_blob.cstep;
 
     const __fp16* pAT = AT_tile;
@@ -662,7 +668,7 @@ static void convolution_gemm_transB_packed_tile_fp16sa(const Mat& AT_tile, const
                     // vst1_f16(outptr0 + out_hstep * 6, vget_low_f16(_sum3));
                     // vst1_f16(outptr0 + out_hstep * 7, vget_high_f16(_sum3));
 
-                    // outptr0 += 4;
+                    outptr0 += 4;
                 }
             }
             else

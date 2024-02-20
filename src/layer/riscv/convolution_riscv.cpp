@@ -53,6 +53,9 @@ namespace ncnn {
 #include "convolution_7x7_pack1ton.h"
 
 #if __riscv_zfh
+#include "convolution_im2col_gemm_bf16s_fp16s.h"
+#include "convolution_im2col_gemm_fp16s.h"
+
 #include "convolution_fp16s.h"
 #include "convolution_packn_fp16s.h"
 #include "convolution_pack1ton_fp16s.h"
@@ -767,6 +770,16 @@ int Convolution_riscv::create_pipeline_fp16s(const Option& opt)
         out_elempack = num_output % packn == 0 ? packn : 1;
     }
 
+    if (opt.use_fp16_arithmetic && opt.use_sgemm_convolution)
+    {
+        convolution_im2col_gemm_transform_kernel_fp16sa(weight_data, weight_sgemm_data, num_input, num_output, kernel_w, kernel_h, opt);
+        ncnn::cast_float32_to_float16(bias_data, bias_data_fp16, opt);
+
+        weight_data.release();
+
+        return 0;
+    }
+
     // packn
     if (elempack == packn && out_elempack == packn)
     {
@@ -910,6 +923,7 @@ int Convolution_riscv::forward_fp16sa(const Mat& bottom_blob, Mat& top_blob, con
     int channels = bottom_blob.c;
     size_t elemsize = bottom_blob.elemsize;
     int elempack = bottom_blob.elempack;
+    fprintf(stderr, "forward_fp16sa elempack:%d\n", elempack);
 
     // NCNN_LOGE("Convolution input %d x %d  pad = %d %d  ksize=%d %d  stride=%d %d", w, h, pad_w, pad_h, kernel_w, kernel_h, stride_w, stride_h);
 
@@ -934,6 +948,26 @@ int Convolution_riscv::forward_fp16sa(const Mat& bottom_blob, Mat& top_blob, con
         return -100;
 
     const int num_input = channels * elempack;
+
+    if (opt.use_fp16_arithmetic && opt.use_sgemm_convolution)
+    {
+        // int _nT = nT ? nT : opt.num_threads;
+        // if (nT != 0 && opt.num_threads != nT)
+        // {
+        //     // force num_threads the same as in create_pipeline
+        //     // so we could use pre-packed A/B from the same tile config
+        //     NCNN_LOGE("opt.num_threads %d changed, convolution gemm will use load-time value %d", opt.num_threads, nT);
+        // }
+        int _nT = opt.num_threads;
+
+        convolution_im2col_gemm_fp16sa(bottom_blob_bordered, top_blob, weight_sgemm_data, bias_data_fp16, kernel_w, kernel_h, dilation_w, dilation_h, stride_w, stride_h, _nT, opt);
+
+        if (activation)
+        {
+            activation->forward_inplace(top_blob, opt);
+        }
+        return 0;
+    }
 
     if (elempack == packn && out_elempack == packn)
     {

@@ -1580,7 +1580,6 @@ int ConvolutionDepthWise_riscv::forward_int8(const Mat& bottom_blob, Mat& top_bl
         // forward
         op->forward(bottom_blob_bordered_g, top_blob_g, opt_g);
     }
-    const float* top_blob_unpacked_data = top_blob_unpacked;
     // packing
     if (out_g_elempack < out_elempack)
     {

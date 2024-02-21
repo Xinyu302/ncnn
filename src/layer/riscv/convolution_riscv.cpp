@@ -37,6 +37,8 @@ namespace ncnn {
 
 #if NCNN_INT8
 #include "convolution_packed_int8.h"
+#include "convolution_sgemm_packn_int8.h"
+#include "convolution_1x1_packn_int8.h"
 #endif // NCNN_INT8
 
 #if __riscv_vector
@@ -1108,10 +1110,57 @@ int Convolution_riscv::forward_fp16sa(const Mat& bottom_blob, Mat& top_blob, con
 #endif // __riscv_vector && __riscv_zfh
 
 #if NCNN_INT8
-int Convolution_riscv::create_pipeline_int8(const Option& opt)
+static void convolution_transform_kernel_packed_int8_rvv(const Mat& weight_data, Mat& weight_data_tm, int num_input, int num_output, int kernel_w, int kernel_h, int elempack, int out_elempack)
 {
     const int maxk = kernel_w * kernel_h;
+
+    // src = kw-kh-inch-outch
+    // dst = pb-pa-kw-kh-inch/pa-outch/pb
+    {
+        Mat weight_data_r2 = weight_data.reshape(maxk, num_input, num_output);
+
+        weight_data_tm.create(maxk, num_input / elempack, num_output / out_elempack, (size_t)1u * elempack * out_elempack, elempack * out_elempack);
+
+        for (int q = 0; q + (out_elempack - 1) < num_output; q += out_elempack)
+        {
+            int8_t* g00 = weight_data_tm.channel(q / out_elempack);
+
+            for (int p = 0; p + (elempack - 1) < num_input; p += elempack)
+            {
+                for (int k = 0; k < maxk; k++)
+                {
+                    for (int i = 0; i < elempack; i++)
+                    {
+                        for (int j = 0; j < out_elempack; j++)
+                        {
+                            const int8_t* k00 = weight_data_r2.channel(q + j).row<const int8_t>(p + i);
+
+                            g00[0] = k00[k];
+
+                            g00++;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+int Convolution_riscv::create_pipeline_int8(const Option& opt)
+{
+    const int packn = csrr_vlenb() / 2;
+
+    const int maxk = kernel_w * kernel_h;
     const int num_input = weight_data_size / maxk / num_output;
+
+    int elempack = 1;
+    int out_elempack = 1;
+
+    if (opt.use_packing_layout)
+    {
+        elempack = num_input % packn == 0 ? packn : 1;
+        out_elempack = num_output % packn == 0 ? packn : 1;
+    }
 
     bool prefer_winograd = (opt.use_winograd23_convolution || opt.use_winograd43_convolution) && (num_input >= 8 && num_output >= 8) && kernel_w == 3 && kernel_h == 3 && dilation_w == 1 && dilation_h == 1 && stride_w == 1 && stride_h == 1;
     // #if NCNN_ARM82DOT
@@ -1135,9 +1184,30 @@ int Convolution_riscv::create_pipeline_int8(const Option& opt)
     }
     else
 #endif
-    {
-        convolution_transform_kernel_packed_int8(weight_data, weight_data_tm, num_input, num_output, kernel_w, kernel_h);
-    }
+        // packn
+        if (elempack == packn && out_elempack == packn)
+        {
+            if (kernel_w == 1 && kernel_h == 1 && dilation_w == 1 && dilation_h == 1 && stride_w == 1 && stride_h == 1)
+            {
+                convolution_transform_kernel_packed_int8_rvv(weight_data, weight_data_tm, num_input, num_output, kernel_w, kernel_h, elempack, out_elempack);
+            }
+            else if (kernel_w == 1 && kernel_h == 1 && dilation_w == 1 && dilation_h == 1 && stride_w == 2 && stride_h == 2)
+            {
+                convolution_transform_kernel_packed_int8_rvv(weight_data, weight_data_tm, num_input, num_output, kernel_w, kernel_h, elempack, out_elempack);
+            }
+            else if (opt.use_sgemm_convolution)
+            {
+                convolution_transform_kernel_packed_int8_rvv(weight_data, weight_data_tm, num_input, num_output, kernel_w, kernel_h, elempack, out_elempack);
+            }
+            else
+            {
+                convolution_transform_kernel_packed_int8(weight_data, weight_data_tm, num_input, num_output, kernel_w, kernel_h);
+            }
+        }
+        else
+        {
+            convolution_transform_kernel_packed_int8(weight_data, weight_data_tm, num_input, num_output, kernel_w, kernel_h);
+        }
 
     scale_in_data.create(num_output);
     for (int p = 0; p < num_output; p++)
@@ -1159,6 +1229,8 @@ int Convolution_riscv::create_pipeline_int8(const Option& opt)
 
 int Convolution_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, const Option& opt) const
 {
+    const int packn = csrr_vlenb() / 2;
+
     int elembits = bottom_blob.elembits();
 
     Mat bottom_blob_int8 = bottom_blob;
@@ -1186,24 +1258,6 @@ int Convolution_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, const
     int outw = (w - kernel_extent_w) / stride_w + 1;
     int outh = (h - kernel_extent_h) / stride_h + 1;
 
-    bool use_int8_requantize = int8_scale_term > 100;
-    int out_elempack = 1;
-#if __riscv_vector
-    if (opt.use_packing_layout)
-    {
-        if (use_int8_requantize)
-            out_elempack = num_output % 8 == 0 ? 8 : 1;
-        else
-            out_elempack = num_output % 4 == 0 ? 4 : 1;
-    }
-#endif // __riscv_vector
-    size_t out_elemsize = use_int8_requantize ? 1u * out_elempack : 4u * out_elempack;
-#if __riscv_vector && __riscv_zfh
-    if (support_fp16_storage && opt.use_fp16_storage)
-    {
-        out_elemsize = use_int8_requantize ? 1u * out_elempack : 2u * out_elempack;
-    }
-#endif // __riscv_vector && __riscv_zfh
     // if (opt.use_bf16_storage)
     //     out_elemsize = use_int8_requantize ? 1u * out_elempack : 2u * out_elempack;
 
@@ -1254,12 +1308,50 @@ int Convolution_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, const
     }
     else
 #endif
-    {
-        convolution_packed_int8(bottom_blob_bordered, top_blob_int32, weight_data_tm, kernel_w, kernel_h, dilation_w, dilation_h, stride_w, stride_h, opt);
-    }
+        if (elempack == packn && out_elempack_int32 == packn)
+        {
+            if (kernel_w == 1 && kernel_h == 1 && dilation_w == 1 && dilation_h == 1 && stride_w == 1 && stride_h == 1)
+            {
+                conv1x1s1_sgemm_packn_int8_rvv(bottom_blob_bordered, top_blob_int32, weight_data_tm, opt);
+            }
+            else if (kernel_w == 1 && kernel_h == 1 && dilation_w == 1 && dilation_h == 1 && stride_w == 2 && stride_h == 2)
+            {
+                conv1x1s2_sgemm_packn_int8_rvv(bottom_blob_bordered, top_blob_int32, weight_data_tm, opt);
+            }
+            else if (opt.use_sgemm_convolution)
+            {
+                convolution_im2col_sgemm_packn_int8_rvv(bottom_blob_bordered, top_blob_int32, weight_data_tm, kernel_w, kernel_h, dilation_w, dilation_h, stride_w, stride_h, opt);
+            }
+            else
+            {
+                convolution_packed_int8(bottom_blob_bordered, top_blob_int32, weight_data_tm, kernel_w, kernel_h, dilation_w, dilation_h, stride_w, stride_h, opt);
+            }
+        }
+        else
+        {
+            convolution_packed_int8(bottom_blob_bordered, top_blob_int32, weight_data_tm, kernel_w, kernel_h, dilation_w, dilation_h, stride_w, stride_h, opt);
+        }
 
     bottom_blob_bordered.release();
 
+    bool use_int8_requantize = int8_scale_term > 100;
+    int out_elempack = 1;
+#if __riscv_vector
+    if (opt.use_packing_layout)
+    {
+        if (use_int8_requantize)
+            out_elempack = num_output % 8 == 0 ? 8 : 1;
+        else
+            out_elempack = num_output % 4 == 0 ? 4 : 1;
+    }
+#endif // __riscv_vector
+    size_t out_elemsize = use_int8_requantize ? 1u * out_elempack : 4u * out_elempack;
+#if __riscv_vector && __riscv_zfh
+    if (support_fp16_storage && opt.use_fp16_storage)
+    {
+        out_elemsize = use_int8_requantize ? 1u * out_elempack : 2u * out_elempack;
+    }
+#endif // __riscv_vector && __riscv_zfh
     top_blob.create(outw, outh, num_output / out_elempack, out_elemsize, out_elempack, opt.blob_allocator);
     if (top_blob.empty())
         return -100;

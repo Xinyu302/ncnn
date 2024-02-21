@@ -1278,7 +1278,7 @@ int Convolution_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, const
 #if __riscv_vector
     if (opt.use_packing_layout)
     {
-        out_elempack_int32 = num_output % packn == 0 ? packn : 1;
+        out_elempack_int32 = num_output % 8 == 0 ? 8 : num_output % 4 == 0 ? 4 : 1;
     }
 #endif // __riscv_vector
 
@@ -1352,7 +1352,6 @@ int Convolution_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, const
         out_elemsize = use_int8_requantize ? 1u * out_elempack : 2u * out_elempack;
     }
 #endif // __riscv_vector && __riscv_zfh
-
     top_blob.create(outw, outh, num_output / out_elempack, out_elemsize, out_elempack, opt.blob_allocator);
     if (top_blob.empty())
         return -100;

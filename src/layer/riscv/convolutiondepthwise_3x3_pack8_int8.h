@@ -15,7 +15,6 @@
 
 static void convdw3x3s1_pack8_int8_rvv(const Mat& bottom_blob, Mat& top_blob, const Mat& kernel, const Option& opt)
 {
-    fprintf(stderr, "convdw3x3s1_pack8_int8_rvv\n");
     int w = bottom_blob.w;
 
     int outw = top_blob.w;

@@ -772,7 +772,7 @@ int Convolution_riscv::create_pipeline_fp16s(const Option& opt)
     }
 
     bool conv1x1 = (kernel_w == 1 && kernel_h == 1 && dilation_w == 1 && dilation_h == 1 && stride_w == 1 && stride_h == 1)
-            || (kernel_w == 1 && kernel_h == 1 && dilation_w == 1 && dilation_h == 1 && stride_w == 2 && stride_h == 2);
+                   || (kernel_w == 1 && kernel_h == 1 && dilation_w == 1 && dilation_h == 1 && stride_w == 2 && stride_h == 2);
 
     if (opt.use_fp16_arithmetic && (opt.use_sgemm_convolution || conv1x1))
     {
@@ -970,7 +970,6 @@ int Convolution_riscv::forward_fp16sa(const Mat& bottom_blob, Mat& top_blob, con
     //     }
     //     return 0;
     // }
-
 
     if (elempack == packn && out_elempack == packn)
     {

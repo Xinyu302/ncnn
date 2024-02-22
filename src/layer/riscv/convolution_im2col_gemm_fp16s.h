@@ -2550,7 +2550,7 @@ static void convolution_im2col_gemm_fp16sa(const Mat& bottom_blob, Mat& top_blob
     Mat topT_tileX;
     if (K > TILE_K)
         topT_tileX.create(TILE_N * TILE_M, 1, nT, 2u, opt.workspace_allocator);
-    
+
     gettimeofday(&start, NULL);
 
     #pragma omp parallel for num_threads(nT)

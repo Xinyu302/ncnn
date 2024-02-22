@@ -2497,8 +2497,9 @@ static void convolution_im2col_gemm_transform_kernel_fp16sa(const Mat& kernel, M
     }
 }
 
-static void convolution_im2col_gemm_fp16sa(const Mat& bottom_blob, Mat& top_blob, const Mat& AT, const Mat& bias, int kernel_w, int kernel_h, int dilation_w, int dilation_h, int stride_w, int stride_h, int nT, const Option& opt)
+static void convolution_im2col_gemm_fp16sa(const Mat& bottom_blob, Mat& top_blob, const Mat& AT, const Mat& bias, int kernel_w, int kernel_h, int dilation_w, int dilation_h, int stride_w, int stride_h, const Option& opt)
 {
+    int nT = 1;
     // NCNN_LOGE("convolution_im2col_gemm_fp16sa %p %p %p %p", bottom_blob.data, top_blob.data, AT.data, bias.data);
     const int maxk = kernel_w * kernel_h;
 
@@ -2514,10 +2515,15 @@ static void convolution_im2col_gemm_fp16sa(const Mat& bottom_blob, Mat& top_blob
     const int nn_K = (K + TILE_K - 1) / TILE_K;
 
     NCNN_LOGE("TILE M/N/K = %d %d %d -> %d %d %d", M, N, K, TILE_M, TILE_N, TILE_K);
+    NCNN_LOGE("NT = %d", nT);
 
     Mat BT(TILE_K * TILE_N, (K + TILE_K - 1) / TILE_K, (N + TILE_N - 1) / TILE_N, 2u, opt.workspace_allocator);
 
     const int nn_NK = nn_N * nn_K;
+
+    struct timeval start, end;
+
+    gettimeofday(&start, NULL);
 
     #pragma omp parallel for num_threads(nT)
     for (int ppjk = 0; ppjk < nn_NK; ppjk++)
@@ -2537,9 +2543,15 @@ static void convolution_im2col_gemm_fp16sa(const Mat& bottom_blob, Mat& top_blob
         convolution_im2col_input_tile_bf16_fp16(bottom_blob, BT_tile, j, max_jj, k, max_kk, kernel_w, kernel_h, dilation_w, dilation_h, stride_w, stride_h);
     }
 
+    gettimeofday(&end, NULL);
+    // time in ms
+    NCNN_LOGE("im2col time = %f", (end.tv_sec - start.tv_sec) * 1000.f + (end.tv_usec - start.tv_usec) / 1000.f);
+
     Mat topT_tileX;
     if (K > TILE_K)
         topT_tileX.create(TILE_N * TILE_M, 1, nT, 2u, opt.workspace_allocator);
+    
+    gettimeofday(&start, NULL);
 
     #pragma omp parallel for num_threads(nT)
     for (int ppj = 0; ppj < nn_M; ppj++)
@@ -2570,4 +2582,8 @@ static void convolution_im2col_gemm_fp16sa(const Mat& bottom_blob, Mat& top_blob
             }
         }
     }
+    gettimeofday(&end, NULL);
+
+    // time in ms
+    NCNN_LOGE("gemm time = %f", (end.tv_sec - start.tv_sec) * 1000.f + (end.tv_usec - start.tv_usec) / 1000.f);
 }

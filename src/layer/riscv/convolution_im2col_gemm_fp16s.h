@@ -2372,7 +2372,7 @@ static void convolution_im2col_gemm_get_optimal_tile_mnk_fp16sa(int M, int N, in
 {
     // resolve optimal tile size from cache size
     // const int l2_cache_size_fp16 = (int)(get_cpu_level2_cache_size() / sizeof(unsigned short));
-    const int l2_cache_size_fp16 = 2097152 / 32;
+    const int l2_cache_size_fp16 = 64 * 1024 / sizeof(unsigned short); // 64 kb 
 
     if (nT == 0)
         nT = get_physical_big_cpu_count();
@@ -2424,6 +2424,9 @@ static void convolution_im2col_gemm_get_optimal_tile_mnk_fp16sa(int M, int N, in
         int nn_N = (N + TILE_N - 1) / TILE_N;
         TILE_N = std::min(TILE_N, ((N + nn_N - 1) / nn_N + 3) / 4 * 4);
     }
+    // TILE_M = 64;
+    // TILE_N = 128;
+    // TILE_K = 512;
 }
 
 static void convolution_im2col_gemm_transform_kernel_fp16sa(const Mat& kernel, Mat& AT, int inch, int outch, int kernel_w, int kernel_h, const Option& opt)

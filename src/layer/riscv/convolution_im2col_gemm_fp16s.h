@@ -12,19 +12,12 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
-static void convolution_gemm_transB_packed_tile_fp16sa(const Mat& AT_tile, const Mat& BT_tile, const Mat& CT_tile, Mat& topT_tile, Mat& top_blob, int i, int max_ii, int j, int max_jj, int k, int max_kk, bool k_end, int use_a53_a55_optimized_kernel)
+static void convolution_gemm_transB_packed_tile_fp16sa(const Mat& AT_tile, const Mat& BT_tile, const Mat& CT_tile, Mat& topT_tile, Mat& top_blob, int i, int max_ii, int j, int max_jj, int k, int max_kk, bool k_end)
 {
     int vl = 8;
-    // fprintf(stderr, "bias1 = %f\n", ((const float*)CT_tile)[1]);
     // NCNN_LOGE("convolution_gemm_transB_packed_tile_fp16sa %d %d %d %d %d %d", i, max_ii, j, max_jj, k, max_kk);
 
     const int out_elempack = top_blob.elempack;
-    // fprintf(stderr, "out_elempack = %d\n", out_elempack);
-    // fprintf(stderr, "AT_tile.w = %d\n", AT_tile.w);
-    // fprintf(stderr, "AT_tile.h = %d\n", AT_tile.h);
-    // fprintf(stderr, "BT_tile.w = %d\n", BT_tile.w);
-    // fprintf(stderr, "BT_tile.h = %d\n", BT_tile.h);
-    // fprintf(stderr, "i = %d, j = %d, max_ii = %d, max_jj = %d, k = %d, max_kk = %d, k_end = %d\n", i, j, max_ii, max_jj, k, max_kk, k_end);
     const int out_hstep = (int)top_blob.cstep;
 
     const __fp16* pAT = AT_tile;
@@ -256,7 +249,6 @@ static void convolution_gemm_transB_packed_tile_fp16sa(const Mat& AT_tile, const
                     vsse16_v_f16m1(outptr0 + 9, out_hstep * sizeof(__fp16), _sum9, vl);
                     vsse16_v_f16m1(outptr0 + 10, out_hstep * sizeof(__fp16), _suma, vl);
                     vsse16_v_f16m1(outptr0 + 11, out_hstep * sizeof(__fp16), _sumb, vl);
-
                     // vst1_f16(outptr0, vget_low_f16(_sum0));
                     // vst1_f16(outptr0 + 4, vget_high_f16(_sum0));
                     // vst1_f16(outptr0 + 8, vget_low_f16(_sum1));
@@ -2442,7 +2434,7 @@ static void convolution_im2col_gemm_transform_kernel_fp16sa(const Mat& kernel, M
     int elempack = 1;
     if (opt.use_packing_layout)
     {
-        elempack = inch % 8 == 0 ? 8 : inch % 4 == 0 ? 4 : 1;
+        elempack = inch % 8 == 0 ? 8 : 1;
     }
 
     // maxk-inch-outch to pa-maxk-inch/pa-outch
@@ -2560,7 +2552,7 @@ static void convolution_im2col_gemm_fp16sa(const Mat& bottom_blob, Mat& top_blob
 
         Mat topT_tile;
         if (K > TILE_K)
-            topT_tile = topT_tileX.channel(get_omp_thread_num());
+            topT_tile = topT_tileX.channel(0);
 
         const int max_ii = std::min((M - i), TILE_M);
 
@@ -2578,7 +2570,7 @@ static void convolution_im2col_gemm_fp16sa(const Mat& bottom_blob, Mat& top_blob
 
                 bool k_end = k + TILE_K >= K;
 
-                convolution_gemm_transB_packed_tile_fp16sa(AT_tile, BT_tile, bias, topT_tile, top_blob, i, max_ii, j, max_jj, k, max_kk, k_end, opt.use_a53_a55_optimized_kernel);
+                convolution_gemm_transB_packed_tile_fp16sa(AT_tile, BT_tile, bias, topT_tile, top_blob, i, max_ii, j, max_jj, k, max_kk, k_end);
             }
         }
     }

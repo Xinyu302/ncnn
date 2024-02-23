@@ -126,7 +126,7 @@ int ShuffleChannel_riscv::forward_bf16s_fp16s(const Mat& bottom_blob, Mat& top_b
                     // index_c906[14] = 7;
                     // index_c906[15] = 19;
 
-                    unsigned short index[12] = {0, 12, 1, 13, 2, 14, 3, 15, 4, 16, 5, 17};
+                    unsigned short index[16] = {0, 12, 1, 13, 2, 14, 3, 15, 4, 16, 5, 17, 6, 18, 7, 19};
 
                     vuint16m4_t _p012 = vundefined_u16m4();
                     _p012 = vset_v_u16m1_u16m4(_p012, 0, _p0);
@@ -134,9 +134,9 @@ int ShuffleChannel_riscv::forward_bf16s_fp16s(const Mat& bottom_blob, Mat& top_b
                     _p012 = vset_v_u16m1_u16m4(_p012, 2, _p2);
 
                     // vl = vsetvl_e16m3(3 * packn);
-                    vuint16m4_t _idx = vle16_v_u16m4(index, vl * 3);
+                    vuint16m4_t _idx = vle16_v_u16m4(index, vl * 2);
 
-                    vuint16m4_t _p01 = vrgather_vv_u16m4(_p012, _idx, vl * 3);
+                    vuint16m4_t _p01 = vrgather_vv_u16m4(_p012, _idx, vl * 2);
 
                     // vl = vsetvl_e16m1(packn);
                     vse16_v_u16m1(outptr0, vget_v_u16m4_u16m1(_p01, 0), vl);
@@ -255,11 +255,11 @@ int ShuffleChannel_riscv::forward_bf16s_fp16s(const Mat& bottom_blob, Mat& top_b
                     _p01 = vset_v_u16m1_u16m2(_p01, 0, _p0);
                     _p01 = vset_v_u16m1_u16m2(_p01, 1, _p1);
 
-                    vuint16m2_t _idx = vle16_v_u16m2(index, vl);
-                    _p01 = vrgather_vv_u16m2(_p01, _idx, vl);
+                    vuint16m2_t _idx = vle16_v_u16m2(index, vl * 2);
+                    _p01 = vrgather_vv_u16m2(_p01, _idx, vl * 2);
 
-                    vse16_v_u16m1(outptr0, vget_v_u16m2_u16m1(_p01, 0), vl / 2);
-                    vse16_v_u16m1(outptr1, vget_v_u16m2_u16m1(_p01, 1), vl / 2);
+                    vse16_v_u16m1(outptr0, vget_v_u16m2_u16m1(_p01, 0), vl);
+                    vse16_v_u16m1(outptr1, vget_v_u16m2_u16m1(_p01, 1), vl);
 
                     // uint16x8_t _p0 = vld1q_u16(ptr0);
                     // uint16x8_t _p1 = vld1q_u16(ptr1);

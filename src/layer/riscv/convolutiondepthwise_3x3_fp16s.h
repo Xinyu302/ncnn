@@ -27,7 +27,7 @@ static void convdw3x3s1_fp16sa_rvv(const Mat& bottom_blob, Mat& top_blob, const 
     const __fp16* kernel = _kernel;
     const __fp16* bias = _bias;
 
-#pragma omp parallel for num_threads(opt.num_threads)
+    #pragma omp parallel for num_threads(opt.num_threads)
     for (int g = 0; g < group; g++)
     {
         Mat out = top_blob.channel(g);
@@ -294,7 +294,7 @@ static void convdw3x3s2_fp16sa_rvv(const Mat& bottom_blob, Mat& top_blob, const 
     const __fp16* kernel = _kernel;
     const __fp16* bias = _bias;
 
-#pragma omp parallel for num_threads(opt.num_threads)
+    #pragma omp parallel for num_threads(opt.num_threads)
     for (int g = 0; g < group; g++)
     {
         Mat out = top_blob.channel(g);

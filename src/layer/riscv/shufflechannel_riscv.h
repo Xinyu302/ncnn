@@ -19,10 +19,10 @@
 
 namespace ncnn {
 
-class ShuffleChannel_arm : public ShuffleChannel
+class ShuffleChannel_riscv : public ShuffleChannel
 {
 public:
-    ShuffleChannel_arm();
+    ShuffleChannel_riscv();
 
     virtual int forward(const Mat& bottom_blob, Mat& top_blob, const Option& opt) const;
 

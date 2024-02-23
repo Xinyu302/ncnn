@@ -20,6 +20,8 @@
 #include <riscv_vector.h>
 #endif // __riscv_vector
 
+#include <riscv_usability.h>
+
 #include "cpu.h"
 
 namespace ncnn {
@@ -38,6 +40,7 @@ ShuffleChannel_riscv::ShuffleChannel_riscv()
 int ShuffleChannel_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Option& opt) const
 {
     int elembits = bottom_blob.elembits();
+    int elempack = bottom_blob.elempack;
 
 #if __riscv_zfh
     if (support_fp16_storage && opt.use_fp16_storage && elembits == 16)
@@ -100,12 +103,44 @@ int ShuffleChannel_riscv::forward_bf16s_fp16s(const Mat& bottom_blob, Mat& top_b
                 for (int i = 0; i < size; i++)
                 {
 
-                    vl = vsetvl_e16m1(packn);
+                    const int vl = vsetvl_e16m1(packn);
                     vuint16m1_t _p0 = vle16_v_u16m1(ptr0, vl);
                     vuint16m1_t _p1 = vle16_v_u16m1(ptr1, vl);
                     vuint16m1_t _p2 = vle16_v_u16m1(ptr2, vl);
 
-                    unsigned short index[12];
+                    // index_c906[0] = 0;
+                    // index_c906[1] = 12;
+                    // index_c906[2] = 1;
+                    // index_c906[3] = 13;
+                    // index_c906[4] = 2;
+                    // index_c906[5] = 14;
+                    // index_c906[6] = 3;
+                    // index_c906[7] = 15;
+
+                    // index_c906[8] = 4;
+                    // index_c906[9] = 16;
+                    // index_c906[10] = 5;
+                    // index_c906[11] = 17;
+                    // index_c906[12] = 6;
+                    // index_c906[13] = 18;
+                    // index_c906[14] = 7;
+                    // index_c906[15] = 19;
+
+                    unsigned short index[12] = {0, 12, 1, 13, 2, 14, 3, 15, 4, 16, 5, 17};
+
+                    vuint16m4_t _p012 = vundefined_u16m4();
+                    _p012 = vset_v_u16m1_u16m4(_p012, 0, _p0);
+                    _p012 = vset_v_u16m1_u16m4(_p012, 1, _p1);
+                    _p012 = vset_v_u16m1_u16m4(_p012, 2, _p2);
+
+                    // vl = vsetvl_e16m3(3 * packn);
+                    vuint16m4_t _idx = vle16_v_u16m4(index, vl * 3);
+
+                    vuint16m4_t _p01 = vrgather_vv_u16m4(_p012, _idx, vl * 3);
+
+                    // vl = vsetvl_e16m1(packn);
+                    vse16_v_u16m1(outptr0, vget_v_u16m4_u16m1(_p01, 0), vl);
+                    vse16_v_u16m1(outptr1, vget_v_u16m4_u16m1(_p01, 1), vl);                   
 
                     // uint16x8_t _p0 = vld1q_u16(ptr0);
                     // uint16x8_t _p1 = vld1q_u16(ptr1);
@@ -136,13 +171,29 @@ int ShuffleChannel_riscv::forward_bf16s_fp16s(const Mat& bottom_blob, Mat& top_b
 
                 for (int i = 0; i < size; i++)
                 {
-                    uint16x4_t _p0 = vld1_u16(ptr0);
-                    uint16x4_t _p1 = vld1_u16(ptr1);
+                    
+                    uint16_t index[8] = {0, 8, 1, 9, 2, 10, 3, 11};
+                    int vl = packn / 2;
+                    vuint16m1_t _p0 = vle16_v_u16m1(ptr0, vl);
+                    vuint16m1_t _p1 = vle16_v_u16m1(ptr1, vl);
 
-                    uint16x4x2_t _p01 = vzip_u16(_p0, _p1);
+                    vuint16m2_t _p01 = vundefined_u16m2();
+                    _p01 = vset_v_u16m1_u16m2(_p01, 0, _p0);
+                    _p01 = vset_v_u16m1_u16m2(_p01, 1, _p1);
 
-                    vst1_u16(outptr0, _p01.val[0]);
-                    vst1_u16(outptr0 + 4, _p01.val[1]);
+                    vl = 8;
+                    vuint16m2_t _idx = vle16_v_u16m2(index, vl);
+                    _p01 = vrgather_vv_u16m2(_p01, _idx, vl);
+                    vse16_v_u16m2(outptr0, _p01, vl);
+
+
+                    // uint16x4_t _p0 = vld1_u16(ptr0);
+                    // uint16x4_t _p1 = vld1_u16(ptr1);
+
+                    // uint16x4x2_t _p01 = vzip_u16(_p0, _p1);
+
+                    // vst1_u16(outptr0, _p01.val[0]);
+                    // vst1_u16(outptr0 + 4, _p01.val[1]);
 
                     ptr0 += 8;
                     ptr1 += 8;
@@ -191,21 +242,32 @@ int ShuffleChannel_riscv::forward_bf16s_fp16s(const Mat& bottom_blob, Mat& top_b
                 const unsigned short* ptr1 = bottom_blob.channel(channels_per_group + q);
                 unsigned short* outptr0 = top_blob.channel(q * 2);
                 unsigned short* outptr1 = top_blob.channel(q * 2 + 1);
-                const int cstep = top_blob.cstep;
 
                 for (int i = 0; i < size; i++)
                 {
-                    const size_t vl = 8;
+                    const size_t vl = packn;
                     vuint16m1_t _p0 = vle16_v_u16m1(ptr0, vl);
                     vuint16m1_t _p1 = vle16_v_u16m1(ptr1, vl);
+
+                    uint16_t index[16] = {0, 8, 1, 9, 2, 10, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15};
+                    
+                    vuint16m2_t _p01 = vundefined_u16m2();
+                    _p01 = vset_v_u16m1_u16m2(_p01, 0, _p0);
+                    _p01 = vset_v_u16m1_u16m2(_p01, 1, _p1);
+
+                    vuint16m2_t _idx = vle16_v_u16m2(index, vl);
+                    _p01 = vrgather_vv_u16m2(_p01, _idx, vl);
+
+                    vse16_v_u16m1(outptr0, vget_v_u16m2_u16m1(_p01, 0), vl / 2);
+                    vse16_v_u16m1(outptr1, vget_v_u16m2_u16m1(_p01, 1), vl / 2);
 
                     // uint16x8_t _p0 = vld1q_u16(ptr0);
                     // uint16x8_t _p1 = vld1q_u16(ptr1);
 
                     // uint16x8x2_t _p01 = vzipq_u16(_p0, _p1);
 
-                    vst1q_u16(outptr0, _p01.val[0]);
-                    vst1q_u16(outptr1, _p01.val[1]);
+                    // vst1q_u16(outptr0, _p01.val[0]);
+                    // vst1q_u16(outptr1, _p01.val[1]);
 
                     ptr0 += 8;
                     ptr1 += 8;
@@ -228,9 +290,29 @@ int ShuffleChannel_riscv::forward_bf16s_fp16s(const Mat& bottom_blob, Mat& top_b
 
                 for (int i = 0; i < size; i++)
                 {
-                    uint16x8_t _p0 = vld1q_u16(ptr0);
-                    uint16x8_t _p1 = vld1q_u16(ptr1);
-                    uint16x8_t _p2 = vld1q_u16(ptr2);
+                    const int vl = packn;
+                    vuint16m1_t _p0 = vle16_v_u16m1(ptr0, vl);
+                    vuint16m1_t _p1 = vle16_v_u16m1(ptr1, vl);
+                    vuint16m1_t _p2 = vle16_v_u16m1(ptr2, vl);
+
+                    uint16_t index[24] = {0, 8, 16, 1, 9, 17, 2, 10, 18, 3, 11, 19, 4, 12, 20, 5, 13, 21, 6, 14, 22, 7, 15, 23};
+
+                    vuint16m4_t _p012 = vundefined_u16m4();
+                    _p012 = vset_v_u16m1_u16m4(_p012, 0, _p0);
+                    _p012 = vset_v_u16m1_u16m4(_p012, 1, _p1);
+                    _p012 = vset_v_u16m1_u16m4(_p012, 2, _p2);
+
+                    vuint16m4_t _idx = vle16_v_u16m4(index, vl * 3);
+
+                    _p012 = vrgather_vv_u16m4(_p012, _idx, vl * 3);
+                    vse16_v_u16m1(outptr0, vget_v_u16m4_u16m1(_p012, 0), vl);
+                    vse16_v_u16m1(outptr1, vget_v_u16m4_u16m1(_p012, 1), vl);
+                    vse16_v_u16m1(outptr2, vget_v_u16m4_u16m1(_p012, 2), vl);
+
+
+                    // uint16x8_t _p0 = vld1q_u16(ptr0);
+                    // uint16x8_t _p1 = vld1q_u16(ptr1);
+                    // uint16x8_t _p2 = vld1q_u16(ptr2);
 
                     // TODO figure out a faster way
 
@@ -238,21 +320,21 @@ int ShuffleChannel_riscv::forward_bf16s_fp16s(const Mat& bottom_blob, Mat& top_b
                     // 89abcdef   ->   i3bj4ck5
                     // ghijklmn        dl6em7fn
 
-                    uint16x8x3_t _p012;
-                    _p012.val[0] = _p0;
-                    _p012.val[1] = _p1;
-                    _p012.val[2] = _p2;
+                    // uint16x8x3_t _p012;
+                    // _p012.val[0] = _p0;
+                    // _p012.val[1] = _p1;
+                    // _p012.val[2] = _p2;
 
-                    unsigned short tmp[24];
-                    vst3q_u16(&tmp[0], _p012);
+                    // unsigned short tmp[24];
+                    // vst3q_u16(&tmp[0], _p012);
 
-                    _p0 = vld1q_u16(&tmp[0]);
-                    _p1 = vld1q_u16(&tmp[8]);
-                    _p2 = vld1q_u16(&tmp[16]);
+                    // _p0 = vld1q_u16(&tmp[0]);
+                    // _p1 = vld1q_u16(&tmp[8]);
+                    // _p2 = vld1q_u16(&tmp[16]);
 
-                    vst1q_u16(outptr0, _p0);
-                    vst1q_u16(outptr1, _p1);
-                    vst1q_u16(outptr2, _p2);
+                    // vst1q_u16(outptr0, _p0);
+                    // vst1q_u16(outptr1, _p1);
+                    // vst1q_u16(outptr2, _p2);
 
                     ptr0 += 8;
                     ptr1 += 8;
@@ -279,25 +361,46 @@ int ShuffleChannel_riscv::forward_bf16s_fp16s(const Mat& bottom_blob, Mat& top_b
 
                 for (int i = 0; i < size; i++)
                 {
-                    uint16x8_t _p0 = vld1q_u16(ptr0);
-                    uint16x8_t _p1 = vld1q_u16(ptr1);
-                    uint16x8_t _p2 = vld1q_u16(ptr2);
-                    uint16x8_t _p3 = vld1q_u16(ptr3);
+                    const int vl = packn;
+                    
+                    vuint16m1_t _p0 = vle16_v_u16m1(ptr0, vl);
+                    vuint16m1_t _p1 = vle16_v_u16m1(ptr1, vl);
+                    vuint16m1_t _p2 = vle16_v_u16m1(ptr2, vl);
+                    vuint16m1_t _p3 = vle16_v_u16m1(ptr3, vl);
+
+                    uint16_t index[32] = {0, 8, 16, 24, 1, 9, 17, 25, 2, 10, 18, 26, 3, 11, 19, 27, 4, 12, 20, 28, 5, 13, 21, 29, 6, 14, 22, 30, 7, 15, 23, 31};
+
+                    vuint16m4_t _p0123 = vundefined_u16m4();
+                    _p0123 = vset_v_u16m1_u16m4(_p0123, 0, _p0);
+                    _p0123 = vset_v_u16m1_u16m4(_p0123, 1, _p1);
+                    _p0123 = vset_v_u16m1_u16m4(_p0123, 2, _p2);
+                    _p0123 = vset_v_u16m1_u16m4(_p0123, 3, _p3);
+
+                    vuint16m4_t _idx = vle16_v_u16m4(index, vl * 4);
+                    _p0123 = vrgather_vv_u16m4(_p0123, _idx, vl * 4);
+                    vse16_v_u16m1(outptr0, vget_v_u16m4_u16m1(_p0123, 0), vl);
+                    vse16_v_u16m1(outptr1, vget_v_u16m4_u16m1(_p0123, 1), vl);
+                    vse16_v_u16m1(outptr2, vget_v_u16m4_u16m1(_p0123, 2), vl);
+                    vse16_v_u16m1(outptr3, vget_v_u16m4_u16m1(_p0123, 3), vl);
+                    // uint16x8_t _p0 = vld1q_u16(ptr0);
+                    // uint16x8_t _p1 = vld1q_u16(ptr1);
+                    // uint16x8_t _p2 = vld1q_u16(ptr2);
+                    // uint16x8_t _p3 = vld1q_u16(ptr3);
 
                     // transpose 4x4
-                    uint16x8x2_t _p01 = vtrnq_u16(_p0, _p1);
-                    uint16x8x2_t _p23 = vtrnq_u16(_p2, _p3);
-                    uint32x4x2_t _p02 = vtrnq_u32(vreinterpretq_u32_u16(_p01.val[0]), vreinterpretq_u32_u16(_p23.val[0]));
-                    uint32x4x2_t _p13 = vtrnq_u32(vreinterpretq_u32_u16(_p01.val[1]), vreinterpretq_u32_u16(_p23.val[1]));
-                    _p0 = vreinterpretq_u16_u32(_p02.val[0]);
-                    _p1 = vreinterpretq_u16_u32(_p13.val[0]);
-                    _p2 = vreinterpretq_u16_u32(_p02.val[1]);
-                    _p3 = vreinterpretq_u16_u32(_p13.val[1]);
+                    // uint16x8x2_t _p01 = vtrnq_u16(_p0, _p1);
+                    // uint16x8x2_t _p23 = vtrnq_u16(_p2, _p3);
+                    // uint32x4x2_t _p02 = vtrnq_u32(vreinterpretq_u32_u16(_p01.val[0]), vreinterpretq_u32_u16(_p23.val[0]));
+                    // uint32x4x2_t _p13 = vtrnq_u32(vreinterpretq_u32_u16(_p01.val[1]), vreinterpretq_u32_u16(_p23.val[1]));
+                    // _p0 = vreinterpretq_u16_u32(_p02.val[0]);
+                    // _p1 = vreinterpretq_u16_u32(_p13.val[0]);
+                    // _p2 = vreinterpretq_u16_u32(_p02.val[1]);
+                    // _p3 = vreinterpretq_u16_u32(_p13.val[1]);
 
-                    vst1q_u16(outptr0, vcombine_u16(vget_low_u16(_p0), vget_low_u16(_p1)));
-                    vst1q_u16(outptr1, vcombine_u16(vget_low_u16(_p2), vget_low_u16(_p3)));
-                    vst1q_u16(outptr2, vcombine_u16(vget_high_u16(_p0), vget_high_u16(_p1)));
-                    vst1q_u16(outptr3, vcombine_u16(vget_high_u16(_p2), vget_high_u16(_p3)));
+                    // vst1q_u16(outptr0, vcombine_u16(vget_low_u16(_p0), vget_low_u16(_p1)));
+                    // vst1q_u16(outptr1, vcombine_u16(vget_low_u16(_p2), vget_low_u16(_p3)));
+                    // vst1q_u16(outptr2, vcombine_u16(vget_high_u16(_p0), vget_high_u16(_p1)));
+                    // vst1q_u16(outptr3, vcombine_u16(vget_high_u16(_p2), vget_high_u16(_p3)));
 
                     ptr0 += 8;
                     ptr1 += 8;

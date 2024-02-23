@@ -28,7 +28,7 @@ static void convdw3x3s1_packn_fp16sa_rvv(const Mat& bottom_blob, Mat& top_blob, 
 
     const __fp16* bias = _bias;
 
-#pragma omp parallel for num_threads(opt.num_threads)
+    #pragma omp parallel for num_threads(opt.num_threads)
     for (int g = 0; g < group; g++)
     {
         Mat out = top_blob.channel(g);
@@ -158,18 +158,18 @@ static void convdw3x3s1_packn_fp16sa_rvv(const Mat& bottom_blob, Mat& top_blob, 
                     "add            %[outptr1],     %[outptr1],     t1  \n\t"
 
                     : [r0] "+r"(r0), [r1] "+r"(r1), [r2] "+r"(r2), [r3] "+r"(r3),
-                      [outptr0] "+r"(outptr0), [outptr1] "+r"(outptr1)
+                    [outptr0] "+r"(outptr0), [outptr1] "+r"(outptr1)
                     : [packn] "r"(packn), [_bias0] "vr"(_bias0),
-                      [_k00] "vr"(_k00), [_k01] "vr"(_k01), [_k02] "vr"(_k02),
-                      [_k10] "vr"(_k10), [_k11] "vr"(_k11), [_k12] "vr"(_k12),
-                      [_k20] "vr"(_k20), [_k21] "vr"(_k21), [_k22] "vr"(_k22)
+                    [_k00] "vr"(_k00), [_k01] "vr"(_k01), [_k02] "vr"(_k02),
+                    [_k10] "vr"(_k10), [_k11] "vr"(_k11), [_k12] "vr"(_k12),
+                    [_k20] "vr"(_k20), [_k21] "vr"(_k21), [_k22] "vr"(_k22)
                     : "cc", "memory",
-                      "t1",
-                      "v0", "v1", "v2", "v3",     // sum00, sum01, sum10, sum11
-                      "v4", "v5", "v6", "v7",     // r00, r01, r02, r03
-                      "v8", "v9", "v10", "v11",   // r10, r11, r12, r13
-                      "v12", "v13", "v14", "v15", // r20, r21, r22, r23
-                      "v16", "v17", "v18", "v19"  // r30, r31, r32, r33
+                    "t1",
+                    "v0", "v1", "v2", "v3",     // sum00, sum01, sum10, sum11
+                    "v4", "v5", "v6", "v7",     // r00, r01, r02, r03
+                    "v8", "v9", "v10", "v11",   // r10, r11, r12, r13
+                    "v12", "v13", "v14", "v15", // r20, r21, r22, r23
+                    "v16", "v17", "v18", "v19"  // r30, r31, r32, r33
                 );
 #else
                 vfloat16m1_t _sum00 = _bias0;
@@ -427,7 +427,7 @@ static void convdw3x3s2_packn_fp16sa_rvv(const Mat& bottom_blob, Mat& top_blob, 
 
     const __fp16* bias = _bias;
 
-#pragma omp parallel for num_threads(opt.num_threads)
+    #pragma omp parallel for num_threads(opt.num_threads)
     for (int g = 0; g < group; g++)
     {
         Mat out = top_blob.channel(g);
@@ -522,15 +522,15 @@ static void convdw3x3s2_packn_fp16sa_rvv(const Mat& bottom_blob, Mat& top_blob, 
                     "add            %[outptr0],     %[outptr0],     t1  \n\t"
                     : [r0] "+r"(r0), [r1] "+r"(r1), [r2] "+r"(r2), [outptr0] "+r"(outptr0)
                     : [packn] "r"(packn), [_bias0] "vr"(_bias0),
-                      [_k00] "vr"(_k00), [_k01] "vr"(_k01), [_k02] "vr"(_k02),
-                      [_k10] "vr"(_k10), [_k11] "vr"(_k11), [_k12] "vr"(_k12),
-                      [_k20] "vr"(_k20), [_k21] "vr"(_k21), [_k22] "vr"(_k22)
+                    [_k00] "vr"(_k00), [_k01] "vr"(_k01), [_k02] "vr"(_k02),
+                    [_k10] "vr"(_k10), [_k11] "vr"(_k11), [_k12] "vr"(_k12),
+                    [_k20] "vr"(_k20), [_k21] "vr"(_k21), [_k22] "vr"(_k22)
                     : "cc", "memory",
-                      "t1",
-                      "v0", "v1",                       // sum00, sum01
-                      "v2", "v3", "v4", "v5", "v6",     // r00, r01, r02, r03, r04
-                      "v7", "v8", "v9", "v10", "v11",   // r10, r11, r12, r13, r14
-                      "v12", "v13", "v14", "v15", "v16" // r20, r21, r22, r23, r24
+                    "t1",
+                    "v0", "v1",                       // sum00, sum01
+                    "v2", "v3", "v4", "v5", "v6",     // r00, r01, r02, r03, r04
+                    "v7", "v8", "v9", "v10", "v11",   // r10, r11, r12, r13, r14
+                    "v12", "v13", "v14", "v15", "v16" // r20, r21, r22, r23, r24
                 );
 #else
                 vfloat16m1_t _sum00 = _bias0;

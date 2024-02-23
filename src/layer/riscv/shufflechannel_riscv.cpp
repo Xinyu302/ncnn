@@ -34,7 +34,6 @@ ShuffleChannel_riscv::ShuffleChannel_riscv()
     support_fp16_storage = true;
 #endif
 #endif // __riscv_vector
-
 }
 
 int ShuffleChannel_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Option& opt) const
@@ -102,7 +101,6 @@ int ShuffleChannel_riscv::forward_bf16s_fp16s(const Mat& bottom_blob, Mat& top_b
 
                 for (int i = 0; i < size; i++)
                 {
-
                     const int vl = vsetvl_e16m1(packn);
                     vuint16m1_t _p0 = vle16_v_u16m1(ptr0, vl);
                     vuint16m1_t _p1 = vle16_v_u16m1(ptr1, vl);
@@ -140,7 +138,7 @@ int ShuffleChannel_riscv::forward_bf16s_fp16s(const Mat& bottom_blob, Mat& top_b
 
                     // vl = vsetvl_e16m1(packn);
                     vse16_v_u16m1(outptr0, vget_v_u16m4_u16m1(_p01, 0), vl);
-                    vse16_v_u16m1(outptr1, vget_v_u16m4_u16m1(_p01, 1), vl);                   
+                    vse16_v_u16m1(outptr1, vget_v_u16m4_u16m1(_p01, 1), vl);
 
                     // uint16x8_t _p0 = vld1q_u16(ptr0);
                     // uint16x8_t _p1 = vld1q_u16(ptr1);
@@ -171,7 +169,6 @@ int ShuffleChannel_riscv::forward_bf16s_fp16s(const Mat& bottom_blob, Mat& top_b
 
                 for (int i = 0; i < size; i++)
                 {
-                    
                     uint16_t index[8] = {0, 8, 1, 9, 2, 10, 3, 11};
                     int vl = packn / 2;
                     vuint16m1_t _p0 = vle16_v_u16m1(ptr0, vl);
@@ -185,7 +182,6 @@ int ShuffleChannel_riscv::forward_bf16s_fp16s(const Mat& bottom_blob, Mat& top_b
                     vuint16m2_t _idx = vle16_v_u16m2(index, vl);
                     _p01 = vrgather_vv_u16m2(_p01, _idx, vl);
                     vse16_v_u16m2(outptr0, _p01, vl);
-
 
                     // uint16x4_t _p0 = vld1_u16(ptr0);
                     // uint16x4_t _p1 = vld1_u16(ptr1);
@@ -250,7 +246,7 @@ int ShuffleChannel_riscv::forward_bf16s_fp16s(const Mat& bottom_blob, Mat& top_b
                     vuint16m1_t _p1 = vle16_v_u16m1(ptr1, vl);
 
                     uint16_t index[16] = {0, 8, 1, 9, 2, 10, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15};
-                    
+
                     vuint16m2_t _p01 = vundefined_u16m2();
                     _p01 = vset_v_u16m1_u16m2(_p01, 0, _p0);
                     _p01 = vset_v_u16m1_u16m2(_p01, 1, _p1);
@@ -309,7 +305,6 @@ int ShuffleChannel_riscv::forward_bf16s_fp16s(const Mat& bottom_blob, Mat& top_b
                     vse16_v_u16m1(outptr1, vget_v_u16m4_u16m1(_p012, 1), vl);
                     vse16_v_u16m1(outptr2, vget_v_u16m4_u16m1(_p012, 2), vl);
 
-
                     // uint16x8_t _p0 = vld1q_u16(ptr0);
                     // uint16x8_t _p1 = vld1q_u16(ptr1);
                     // uint16x8_t _p2 = vld1q_u16(ptr2);
@@ -362,7 +357,7 @@ int ShuffleChannel_riscv::forward_bf16s_fp16s(const Mat& bottom_blob, Mat& top_b
                 for (int i = 0; i < size; i++)
                 {
                     const int vl = packn;
-                    
+
                     vuint16m1_t _p0 = vle16_v_u16m1(ptr0, vl);
                     vuint16m1_t _p1 = vle16_v_u16m1(ptr1, vl);
                     vuint16m1_t _p2 = vle16_v_u16m1(ptr2, vl);
@@ -434,7 +429,7 @@ int ShuffleChannel_riscv::forward_bf16s_fp16s(const Mat& bottom_blob, Mat& top_b
 
         convert_packing(top_blob_unpacked, top_blob, elempack, opt);
 
-        return 0; 
+        return 0;
     }
 #endif // __riscv_vector
 

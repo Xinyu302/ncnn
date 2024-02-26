@@ -39,7 +39,7 @@ static void im2col_sgemm_packn_int8_rvv(const Mat& bottom_im2col, Mat& top_blob,
         int remain_size_start = 0;
         int nn_size = size >> 3;
 
-#pragma omp parallel for num_threads(opt.num_threads)
+        #pragma omp parallel for num_threads(opt.num_threads)
         for (int ii = 0; ii < nn_size; ii++)
         {
             int i = remain_size_start + ii * 8;
@@ -71,7 +71,7 @@ static void im2col_sgemm_packn_int8_rvv(const Mat& bottom_im2col, Mat& top_blob,
         remain_size_start += nn_size << 3;
         nn_size = (size - remain_size_start) >> 2;
 
-#pragma omp parallel for num_threads(opt.num_threads)
+        #pragma omp parallel for num_threads(opt.num_threads)
         for (int ii = 0; ii < nn_size; ii++)
         {
             int i = remain_size_start + ii * 4;
@@ -100,7 +100,7 @@ static void im2col_sgemm_packn_int8_rvv(const Mat& bottom_im2col, Mat& top_blob,
 
         nn_size = (size - remain_size_start) >> 1;
 
-#pragma omp parallel for num_threads(opt.num_threads)
+        #pragma omp parallel for num_threads(opt.num_threads)
         for (int ii = 0; ii < nn_size; ii++)
         {
             int i = remain_size_start + ii * 2;
@@ -125,7 +125,7 @@ static void im2col_sgemm_packn_int8_rvv(const Mat& bottom_im2col, Mat& top_blob,
 
         remain_size_start += nn_size << 1;
 
-#pragma omp parallel for num_threads(opt.num_threads)
+        #pragma omp parallel for num_threads(opt.num_threads)
         for (int i = remain_size_start; i < size; i++)
         {
             int8_t* tmpptr = tmp.channel(i / 8 + (i % 8) / 4 + (i % 4) / 2 + i % 2);
@@ -146,7 +146,7 @@ static void im2col_sgemm_packn_int8_rvv(const Mat& bottom_im2col, Mat& top_blob,
         }
     }
     int p = 0;
-#pragma omp parallel for num_threads(opt.num_threads)
+    #pragma omp parallel for num_threads(opt.num_threads)
     for (; p + 2 < outch; p += 3)
     {
         int32_t* outptr0 = top_blob.channel(p + 0);
@@ -647,7 +647,7 @@ static void im2col_sgemm_packn_int8_rvv(const Mat& bottom_im2col, Mat& top_blob,
             outptr2 += packn;
         }
     }
-#pragma omp parallel for num_threads(opt.num_threads)
+    #pragma omp parallel for num_threads(opt.num_threads)
     for (; p < outch; p++)
     {
         int32_t* outptr0 = top_blob.channel(p);
@@ -907,7 +907,7 @@ static void convolution_im2col_sgemm_packn_int8_rvv(const Mat& bottom_blob, Mat&
     {
         const int gap = (w * stride_h - outw * stride_w) * packn;
 
-#pragma omp parallel for num_threads(opt.num_threads)
+        #pragma omp parallel for num_threads(opt.num_threads)
         for (int p = 0; p < inch; p++)
         {
             const Mat img = bottom_blob.channel(p);

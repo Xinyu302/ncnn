@@ -1139,7 +1139,7 @@ NCNN_FORCEINLINE void Mat::fill(vint32m2_t _v)
     const size_t vl = vsetvl_e32m2(packn);
 
     int size = (int)total();
-    int* ptr = (int *)data;
+    int* ptr = (int*)data;
     for (int i = 0; i < size; i++)
     {
         vse32_v_i32m2(ptr, _v, vl);

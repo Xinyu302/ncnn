@@ -17,13 +17,12 @@ static void conv3x3s1_pack1ton_int8_rvv(const Mat& bottom_blob, Mat& top_blob, c
     const int packn = csrr_vlenb() / 2;
     const size_t vl = vsetvl_e8m1(packn);
 
-
     int inch = bottom_blob.c;
     int outw = top_blob.w;
     int outh = top_blob.h;
     int outch = top_blob.c;
 
-#pragma omp parallel for num_threads(opt.num_threads)
+    #pragma omp parallel for num_threads(opt.num_threads)
     for (int p = 0; p < outch; p++)
     {
         Mat out0 = top_blob.channel(p);
@@ -308,7 +307,7 @@ static void conv3x3s2_pack1ton_int8_rvv(const Mat& bottom_blob, Mat& top_blob, c
 
     const int tailstep = w - 2 * outw + w;
 
-#pragma omp parallel for num_threads(opt.num_threads)
+    #pragma omp parallel for num_threads(opt.num_threads)
     for (int p = 0; p < outch; p++)
     {
         Mat out0 = top_blob.channel(p);

@@ -585,8 +585,8 @@ int Convolution_riscv::forward(const Mat& bottom_blob, Mat& top_blob, const Opti
                 }
             }
 
-// num_output
-#pragma omp parallel for num_threads(opt.num_threads)
+            // num_output
+            #pragma omp parallel for num_threads(opt.num_threads)
             for (int p = 0; p < num_output; p++)
             {
                 float* outptr = top_blob.channel(p);
@@ -1185,7 +1185,7 @@ int Convolution_riscv::create_pipeline_int8(const Option& opt)
             // if (opt.use_winograd43_convolution)
             //     conv3x3s1_winograd43_transform_kernel_packn_int8_rvv(weight_data, weight_winograd43_data, num_input, num_output, opt);
             // else
-                conv3x3s1_winograd23_transform_kernel_packn_int8_rvv(weight_data, weight_winograd23_data, num_input, num_output, opt);
+            conv3x3s1_winograd23_transform_kernel_packn_int8_rvv(weight_data, weight_winograd23_data, num_input, num_output, opt);
         }
         else if (opt.use_sgemm_convolution)
         {
@@ -1288,7 +1288,7 @@ int Convolution_riscv::forward_int8(const Mat& bottom_blob, Mat& top_blob, const
             // if (opt.use_winograd43_convolution && !weight_winograd43_data.empty())
             //     conv3x3s1_winograd23_packn_int8_rvv(bottom_blob_bordered, top_blob_int32, weight_winograd43_data, opt);
             // else
-                conv3x3s1_winograd23_packn_int8_rvv(bottom_blob_bordered, top_blob_int32, weight_winograd23_data, opt);
+            conv3x3s1_winograd23_packn_int8_rvv(bottom_blob_bordered, top_blob_int32, weight_winograd23_data, opt);
         }
         else if (opt.use_sgemm_convolution)
         {

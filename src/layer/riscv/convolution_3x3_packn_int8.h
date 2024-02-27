@@ -17,16 +17,24 @@ static void conv3x3s1_winograd43_transform_kernel_packn_int8_rvv(const Mat& kern
     const int packn = csrr_vlenb() / 2;
 
     // winograd43 transform kernel
-    Mat kernel_tm(6 * 6, inch, outch);
+    Mat kernel_tm(6 * 6, inch, outch, sizeof(int16_t));
 
-    const float sq2 = 1.41421356237f;
-    const float ktm[6][3] = {
-        {1.0f, 0.0f, 0.0f},
-        {-2.0f / 3, -sq2 / 3, -1.0f / 3},
-        {-2.0f / 3, sq2 / 3, -1.0f / 3},
-        {1.0f / 6, sq2 / 6, 1.0f / 3},
-        {1.0f / 6, -sq2 / 6, 1.0f / 3},
-        {0.0f, 0.0f, 1.0f}
+    // const float sq2 = 1.41421356237f;
+    // const float ktm[6][3] = {
+    //     {1.0f, 0.0f, 0.0f},
+    //     {-2.0f / 3, -sq2 / 3, -1.0f / 3},
+    //     {-2.0f / 3, sq2 / 3, -1.0f / 3},
+    //     {1.0f / 6, sq2 / 6, 1.0f / 3},
+    //     {1.0f / 6, -sq2 / 6, 1.0f / 3},
+    //     {0.0f, 0.0f, 1.0f}
+    // };
+    const int16_t ktm[6][3] = {
+        {6, 0, 0},
+        {-4, -4, -4},
+        {-4, 4, -4},
+        {1, 2, 4},
+        {1, -2, 4},
+        {0, 0, 6}
     };
 
     #pragma omp parallel for num_threads(opt.num_threads)
@@ -34,16 +42,16 @@ static void conv3x3s1_winograd43_transform_kernel_packn_int8_rvv(const Mat& kern
     {
         for (int q = 0; q < inch; q++)
         {
-            const float* kernel0 = (const float*)kernel + p * inch * 9 + q * 9;
-            float* kernel_tm0 = kernel_tm.channel(p).row(q);
+            const int8_t* kernel0 = (const int8_t*)kernel + p * inch * 9 + q * 9;
+            int8_t* kernel_tm0 = kernel_tm.channel(p).row(q);
 
             // transform kernel
-            const float* k0 = kernel0;
-            const float* k1 = kernel0 + 3;
-            const float* k2 = kernel0 + 6;
+            const int8_t* k0 = kernel0;
+            const int8_t* k1 = kernel0 + 3;
+            const int8_t* k2 = kernel0 + 6;
 
             // h
-            float tmp[6][3];
+            int16_t tmp[6][3];
             for (int i = 0; i < 6; i++)
             {
                 tmp[i][0] = k0[0] * ktm[i][0] + k0[1] * ktm[i][1] + k0[2] * ktm[i][2];
@@ -54,7 +62,7 @@ static void conv3x3s1_winograd43_transform_kernel_packn_int8_rvv(const Mat& kern
             // U
             for (int j = 0; j < 6; j++)
             {
-                float* tmpp = &tmp[j][0];
+                int16_t* tmpp = &tmp[j][0];
 
                 for (int i = 0; i < 6; i++)
                 {
@@ -67,7 +75,7 @@ static void conv3x3s1_winograd43_transform_kernel_packn_int8_rvv(const Mat& kern
     // interleave
     // src = 36-inch-outch
     // dst = pb-pa-inch/pa-36-outch/pb
-    kernel_tm_packn.create(inch / packn, 36, outch / packn, (size_t)2u * packn * packn, packn * packn);
+    kernel_tm_packn.create(inch / packn, 36, outch / packn, sizeof(int16_t) * packn * packn, packn * packn);
 
     for (int q = 0; q + (packn - 1) < outch; q += packn)
     {
@@ -75,7 +83,7 @@ static void conv3x3s1_winograd43_transform_kernel_packn_int8_rvv(const Mat& kern
 
         for (int k = 0; k < 36; k++)
         {
-            int8_t* g00 = g0.row<int8_t>(k);
+            int16_t* g00 = g0.row<int16_t>(k);
 
             for (int p = 0; p + (packn - 1) < inch; p += packn)
             {
@@ -83,8 +91,8 @@ static void conv3x3s1_winograd43_transform_kernel_packn_int8_rvv(const Mat& kern
                 {
                     for (int j = 0; j < packn; j++)
                     {
-                        const float* k00 = kernel_tm.channel(q + j).row(p + i);
-                        g00[0] = (int8_t)k00[k];
+                        const int16_t* k00 = kernel_tm.channel(q + j).row(p + i);
+                        g00[0] = (int16_t)k00[k];
                         g00++;
                     }
                 }
@@ -98,7 +106,6 @@ static void conv3x3s1_winograd43_packn_int8_rvv(const Mat& bottom_blob, Mat& top
     int w = bottom_blob.w;
     int h = bottom_blob.h;
     int inch = bottom_blob.c;
-    size_t elemsize = bottom_blob.elemsize;
     int elempack = bottom_blob.elempack;
 
     int outw = top_blob.w;
@@ -122,7 +129,7 @@ static void conv3x3s1_winograd43_packn_int8_rvv(const Mat& bottom_blob, Mat& top
         int h_tiles = outh / 4;
         const int tiles = w_tiles * h_tiles;
 
-        bottom_blob_tm.create(tiles, 36, inch, elemsize, elempack, opt.workspace_allocator);
+        bottom_blob_tm.create(tiles, 36, inch, sizeof(int16_t) * elempack, elempack, opt.workspace_allocator);
         conv3x3s1_winograd43_transform_input_packn_int8_rvv(bottom_blob_bordered, bottom_blob_tm, opt);
     }
     bottom_blob_bordered = Mat();
@@ -141,7 +148,7 @@ static void conv3x3s1_winograd43_packn_int8_rvv(const Mat& bottom_blob, Mat& top
     }
     else
     {
-        top_blob_bordered.create(outw, outh, outch, elemsize, elempack, opt.workspace_allocator);
+        top_blob_bordered.create(outw, outh, outch, sizeof(int32_t) * elempack, elempack, opt.workspace_allocator);
     }
     {
         conv3x3s1_winograd43_transform_output_packn_int8_rvv(top_blob_tm, top_blob_bordered, bias, opt);
@@ -157,13 +164,19 @@ static void conv3x3s1_winograd23_transform_kernel_packn_int8_rvv(const Mat& kern
     const int packn = csrr_vlenb() / 2;
 
     // winograd23 transform kernel
-    Mat kernel_tm(4 * 4, inch, outch);
+    Mat kernel_tm(4 * 4, inch, outch, sizeof(int16_t));
 
-    const float ktm[4][3] = {
-        {1.0f, 0.0f, 0.0f},
-        {1.0f / 2, 1.0f / 2, 1.0f / 2},
-        {1.0f / 2, -1.0f / 2, 1.0f / 2},
-        {0.0f, 0.0f, 1.0f}
+    // const float ktm[4][3] = {
+    //     {1.0f, 0.0f, 0.0f},
+    //     {1.0f / 2, 1.0f / 2, 1.0f / 2},
+    //     {1.0f / 2, -1.0f / 2, 1.0f / 2},
+    //     {0.0f, 0.0f, 1.0f}
+    // };
+    const int16_t ktm[4][3] = {
+        {2, 0, 0},
+        {1, 1, 1},
+        {1, -1, 1},
+        {0, 0, 2}
     };
 
     #pragma omp parallel for num_threads(opt.num_threads)
@@ -171,16 +184,16 @@ static void conv3x3s1_winograd23_transform_kernel_packn_int8_rvv(const Mat& kern
     {
         for (int q = 0; q < inch; q++)
         {
-            const float* kernel0 = (const float*)kernel + p * inch * 9 + q * 9;
-            float* kernel_tm0 = kernel_tm.channel(p).row(q);
+            const int8_t* kernel0 = (const float*)kernel + p * inch * 9 + q * 9;
+            int8_t* kernel_tm0 = kernel_tm.channel(p).row(q);
 
             // transform kernel
-            const float* k0 = kernel0;
-            const float* k1 = kernel0 + 3;
-            const float* k2 = kernel0 + 6;
+            const int8_t* k0 = kernel0;
+            const int8_t* k1 = kernel0 + 3;
+            const int8_t* k2 = kernel0 + 6;
 
             // h
-            float tmp[4][3];
+            int16_t tmp[4][3];
             for (int i = 0; i < 4; i++)
             {
                 tmp[i][0] = k0[0] * ktm[i][0] + k0[1] * ktm[i][1] + k0[2] * ktm[i][2];
@@ -191,7 +204,7 @@ static void conv3x3s1_winograd23_transform_kernel_packn_int8_rvv(const Mat& kern
             // U
             for (int j = 0; j < 4; j++)
             {
-                float* tmpp = &tmp[j][0];
+                int16_t* tmpp = &tmp[j][0];
 
                 for (int i = 0; i < 4; i++)
                 {
@@ -204,7 +217,7 @@ static void conv3x3s1_winograd23_transform_kernel_packn_int8_rvv(const Mat& kern
     // interleave
     // src = 16-inch-outch
     // dst = pb-pa-inch/pa-16-outch/pb
-    kernel_tm_packn.create(inch / packn, 16, outch / packn, (size_t)2u * packn * packn, packn * packn);
+    kernel_tm_packn.create(inch / packn, 16, outch / packn, sizeof(int16_t) * packn * packn, packn * packn);
 
     for (int q = 0; q + (packn - 1) < outch; q += packn)
     {
@@ -235,7 +248,6 @@ static void conv3x3s1_winograd23_packn_int8_rvv(const Mat& bottom_blob, Mat& top
     int w = bottom_blob.w;
     int h = bottom_blob.h;
     int inch = bottom_blob.c;
-    size_t elemsize = bottom_blob.elemsize;
     int elempack = bottom_blob.elempack;
 
     int outw = top_blob.w;
@@ -259,7 +271,7 @@ static void conv3x3s1_winograd23_packn_int8_rvv(const Mat& bottom_blob, Mat& top
         int h_tiles = outh / 2;
         const int tiles = w_tiles * h_tiles;
 
-        bottom_blob_tm.create(tiles, 16, inch, elemsize, elempack, opt.workspace_allocator);
+        bottom_blob_tm.create(tiles, 16, inch, sizeof(int16_t) * elempack, elempack, opt.workspace_allocator);
         conv3x3s1_winograd23_transform_input_packn_int8_rvv(bottom_blob_bordered, bottom_blob_tm, opt);
     }
     bottom_blob_bordered = Mat();
@@ -278,7 +290,7 @@ static void conv3x3s1_winograd23_packn_int8_rvv(const Mat& bottom_blob, Mat& top
     }
     else
     {
-        top_blob_bordered.create(outw, outh, outch, elemsize, elempack, opt.workspace_allocator);
+        top_blob_bordered.create(outw, outh, outch, sizeof(int32_t) * elempack, elempack, opt.workspace_allocator);
     }
     {
         conv3x3s1_winograd23_transform_output_packn_int8_rvv(top_blob_tm, top_blob_bordered, bias, opt);

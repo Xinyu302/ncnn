@@ -25,24 +25,21 @@ static void conv3x3s1_winograd43_transform_input_packn_int8_rvv(const Mat& botto
     const int h_tiles = (h - 2) / 4;
     const int tiles = w_tiles * h_tiles;
 
-    const float sq2 = 1.41421356237;
-    const float sq2_d2 = 1.41421356237 / 2;
-
-    // const float itm[6][6] = {
-    //     {1.0f,  0.0f,  -2.5f,  0.0f,  1.0f, 0.0f},
-    //     {0.0f, -sq2,   -2.0f,  sq2/2, 1.0f, 0.0f},
-    //     {0.0f,  sq2,   -2.0f, -sq2/2, 1.0f, 0.0f},
-    //     {0.0f, -sq2/2, -0.5f,  sq2,   1.0f, 0.0f},
-    //     {0.0f,  sq2/2, -0.5f, -sq2,   1.0f, 0.0f},
-    //     {0.0f,  1.0f,   0.0f,  -2.5f, 0.0f, 1.0f}
+    // const int16_t itm[4][4] = {
+    //     {4,  0, -5,  0, 1, 0},
+    //     {0, -4, -4,  1, 1, 0},
+    //     {0,  4, -4, -1, 1, 0},
+    //     {0, -2, -1,  2, 1, 0},
+    //     {0,  2, -1, -2, 1, 0},
+    //     {0,  4,  0, -5, 0, 1}
     // };
 
-    // 0 =  r00 - 2.5f * r02 + r04
-    // 1 = -(sq2 * r01 - sq2_d2 * r03) + (r04 - 2 * r02)
-    // 2 =  (sq2 * r01 - sq2_d2 * r03) + (r04 - 2 * r02)
-    // 3 = -(sq2_d2 * r01 - sq2 * r03) + (r04 - 0.5f * r02)
-    // 4 =  (sq2_d2 * r01 - sq2 * r03) + (r04 - 0.5f * r02)
-    // 5 =  r01 - 2.5f * r03 + r05
+    // 0 =  4 * r00 - 5 * r02 + r04
+    // 1 =  (-4 * r01 + r03) + (r04 - 4 * r02)
+    // 2 = -(-4 * r01 + r03) + (r04 - 4 * r02)
+    // 3 = -(2 * r01 - 2 * r03) + (r04 - r02)
+    // 4 =  (2 * r01 - 2 * r03) + (r04 - r02)
+    // 5 =  4 * r01 - 5 * r03 + r05
 
     #pragma omp parallel for num_threads(opt.num_threads)
     for (int q = 0; q < inch; q++)
@@ -51,80 +48,84 @@ static void conv3x3s1_winograd43_transform_input_packn_int8_rvv(const Mat& botto
         Mat img0_tm = bottom_blob_tm.channel(q);
 
         // NOTE c99 variable length array
-        int8_t tmp[6][6][packn];
+        int16_t tmp[6][6][packn];
 
         // tile
         for (int i = 0; i < h_tiles; i++)
         {
             for (int j = 0; j < w_tiles; j++)
             {
-                const int8_t* r0 = img0.row<const int8_t>(i * 4) + (j * 4) * packn;
+                const int16_t* r0 = img0.row<const int8_t>(i * 4) + (j * 4) * packn;
 
                 for (int m = 0; m < 6; m++)
                 {
-                    vfloat16m1_t _r00 = vle16_v_f16m1(r0, vl);
-                    vfloat16m1_t _r01 = vle16_v_f16m1(r0 + packn, vl);
-                    vfloat16m1_t _r02 = vle16_v_f16m1(r0 + packn * 2, vl);
-                    vfloat16m1_t _r03 = vle16_v_f16m1(r0 + packn * 3, vl);
-                    vfloat16m1_t _r04 = vle16_v_f16m1(r0 + packn * 4, vl);
-                    vfloat16m1_t _r05 = vle16_v_f16m1(r0 + packn * 5, vl);
+                    vint16m2_t _r00_01 = vwcvt_x_x_v_i16m2(vle8_v_i8m1(r0 + packn * 0, vl * 2), vl * 2);
+                    vint16m2_t _r02_03 = vwcvt_x_x_v_i16m2(vle8_v_i8m1(r0 + packn * 2, vl * 2), vl * 2);
+                    vint16m2_t _r04_05 = vwcvt_x_x_v_i16m2(vle8_v_i8m1(r0 + packn * 4, vl * 2), vl * 2);
 
-                    vfloat16m1_t _tmp01a = vfmacc_vf_f16m1(vfmul_vf_f16m1(_r01, sq2, vl), -sq2_d2, _r03, vl);
-                    vfloat16m1_t _tmp01b = vfmacc_vf_f16m1(_r04, -2.f, _r02, vl);
-                    vfloat16m1_t _tmp23a = vfmacc_vf_f16m1(vfmul_vf_f16m1(_r01, sq2_d2, vl), -sq2, _r03, vl);
-                    vfloat16m1_t _tmp23b = vfmacc_vf_f16m1(_r04, -0.5f, _r02, vl);
+                    vint16m1_t _r00 = vget_v_i16m2_i16m1(_r00_01, 0, vl);
+                    vint16m1_t _r01 = vget_v_i16m2_i16m1(_r00_01, 1, vl);
+                    vint16m1_t _r02 = vget_v_i16m2_i16m1(_r02_03, 0, vl);
+                    vint16m1_t _r03 = vget_v_i16m2_i16m1(_r02_03, 1, vl);
+                    vint16m1_t _r04 = vget_v_i16m2_i16m1(_r04_05, 0, vl);
+                    vint16m1_t _r05 = vget_v_i16m2_i16m1(_r04_05, 1, vl);
 
-                    vfloat16m1_t _tmp0m = vfmacc_vf_f16m1(vfadd_vv_f16m1(_r00, _r04, vl), -2.5f, _r02, vl);
-                    vfloat16m1_t _tmp1m = vfsub_vv_f16m1(_tmp01b, _tmp01a, vl);
-                    vfloat16m1_t _tmp2m = vfadd_vv_f16m1(_tmp01b, _tmp01a, vl);
-                    vfloat16m1_t _tmp3m = vfsub_vv_f16m1(_tmp23b, _tmp23a, vl);
-                    vfloat16m1_t _tmp4m = vfadd_vv_f16m1(_tmp23b, _tmp23a, vl);
-                    vfloat16m1_t _tmp5m = vfmacc_vf_f16m1(vfadd_vv_f16m1(_r01, _r05, vl), -2.5f, _r03, vl);
+                    vint16m1_t _tmp01a = vnmsub_vx_i16m1(_r01, 4, _r03, vl);
+                    vint16m1_t _tmp01b = vnmsub_vx_i16m1(_r02, 4, _r04, vl);
+                    vint16m1_t _tmp23a = vmul_vx_i16m1(vsub_vv_i16m1(_r01, _r03, vl), 2, vl);
+                    vint16m1_t _tmp23b = vsub_vv_i16m1(_r04, _r02, vl);
 
-                    vse16_v_f16m1(tmp[0][m], _tmp0m, vl);
-                    vse16_v_f16m1(tmp[1][m], _tmp1m, vl);
-                    vse16_v_f16m1(tmp[2][m], _tmp2m, vl);
-                    vse16_v_f16m1(tmp[3][m], _tmp3m, vl);
-                    vse16_v_f16m1(tmp[4][m], _tmp4m, vl);
-                    vse16_v_f16m1(tmp[5][m], _tmp5m, vl);
+                    vint16m1_t _tmp0m = vmacc_vx_i16m1(vnmsac_vx_i16m1(_r04, 5, _r02, vl), 4, _r00, vl);
+                    vint16m1_t _tmp1m = vadd_vv_i16m1(_tmp01b, _tmp01a, vl);
+                    vint16m1_t _tmp2m = vsub_vv_i16m1(_tmp01b, _tmp01a, vl);
+                    vint16m1_t _tmp3m = vsub_vv_i16m1(_tmp23b, _tmp23a, vl);
+                    vint16m1_t _tmp4m = vadd_vv_i16m1(_tmp23b, _tmp23a, vl);
+                    vint16m1_t _tmp5m = vmacc_vx_i16m1(vnmsac_vx_i16m1(_r05, 5, _r03, vl), 4, _r01, vl);
+
+                    vse16_v_i16m1(tmp[0][m], _tmp0m, vl);
+                    vse16_v_i16m1(tmp[1][m], _tmp1m, vl);
+                    vse16_v_i16m1(tmp[2][m], _tmp2m, vl);
+                    vse16_v_i16m1(tmp[3][m], _tmp3m, vl);
+                    vse16_v_i16m1(tmp[4][m], _tmp4m, vl);
+                    vse16_v_i16m1(tmp[5][m], _tmp5m, vl);
 
                     r0 += w * packn;
                 }
 
-                int8_t* r0_tm_0 = (int8_t*)img0_tm + (i * w_tiles + j) * packn;
-                int8_t* r0_tm_1 = r0_tm_0 + tiles * packn;
-                int8_t* r0_tm_2 = r0_tm_0 + tiles * packn * 2;
-                int8_t* r0_tm_3 = r0_tm_0 + tiles * packn * 3;
-                int8_t* r0_tm_4 = r0_tm_0 + tiles * packn * 4;
-                int8_t* r0_tm_5 = r0_tm_0 + tiles * packn * 5;
+                int16_t* r0_tm_0 = (int16_t*)img0_tm + (i * w_tiles + j) * packn;
+                int16_t* r0_tm_1 = r0_tm_0 + tiles * packn;
+                int16_t* r0_tm_2 = r0_tm_0 + tiles * packn * 2;
+                int16_t* r0_tm_3 = r0_tm_0 + tiles * packn * 3;
+                int16_t* r0_tm_4 = r0_tm_0 + tiles * packn * 4;
+                int16_t* r0_tm_5 = r0_tm_0 + tiles * packn * 5;
 
                 for (int m = 0; m < 6; m++)
                 {
-                    vfloat16m1_t _r00 = vle16_v_f16m1(tmp[m][0], vl);
-                    vfloat16m1_t _r01 = vle16_v_f16m1(tmp[m][1], vl);
-                    vfloat16m1_t _r02 = vle16_v_f16m1(tmp[m][2], vl);
-                    vfloat16m1_t _r03 = vle16_v_f16m1(tmp[m][3], vl);
-                    vfloat16m1_t _r04 = vle16_v_f16m1(tmp[m][4], vl);
-                    vfloat16m1_t _r05 = vle16_v_f16m1(tmp[m][5], vl);
+                    vint16m1_t _r00 = vle16_v_i16m1(tmp[m][0], vl);
+                    vint16m1_t _r01 = vle16_v_i16m1(tmp[m][1], vl);
+                    vint16m1_t _r02 = vle16_v_i16m1(tmp[m][2], vl);
+                    vint16m1_t _r03 = vle16_v_i16m1(tmp[m][3], vl);
+                    vint16m1_t _r04 = vle16_v_i16m1(tmp[m][4], vl);
+                    vint16m1_t _r05 = vle16_v_i16m1(tmp[m][5], vl);
 
-                    vfloat16m1_t _tmp01a = vfmacc_vf_f16m1(vfmul_vf_f16m1(_r01, sq2, vl), -sq2_d2, _r03, vl);
-                    vfloat16m1_t _tmp01b = vfmacc_vf_f16m1(_r04, -2.f, _r02, vl);
-                    vfloat16m1_t _tmp23a = vfmacc_vf_f16m1(vfmul_vf_f16m1(_r01, sq2_d2, vl), -sq2, _r03, vl);
-                    vfloat16m1_t _tmp23b = vfmacc_vf_f16m1(_r04, -0.5f, _r02, vl);
+                    vint16m1_t _tmp01a = vnmsub_vx_i16m1(_r01, 4, _r03, vl);
+                    vint16m1_t _tmp01b = vnmsub_vx_i16m1(_r02, 4, _r04, vl);
+                    vint16m1_t _tmp23a = vmul_vx_i16m1(vsub_vv_i16m1(_r01, _r03, vl), 2, vl);
+                    vint16m1_t _tmp23b = vsub_vv_i16m1(_r04, _r02, vl);
 
-                    vfloat16m1_t _tmp0m = vfmacc_vf_f16m1(vfadd_vv_f16m1(_r00, _r04, vl), -2.5f, _r02, vl);
-                    vfloat16m1_t _tmp1m = vfsub_vv_f16m1(_tmp01b, _tmp01a, vl);
-                    vfloat16m1_t _tmp2m = vfadd_vv_f16m1(_tmp01b, _tmp01a, vl);
-                    vfloat16m1_t _tmp3m = vfsub_vv_f16m1(_tmp23b, _tmp23a, vl);
-                    vfloat16m1_t _tmp4m = vfadd_vv_f16m1(_tmp23b, _tmp23a, vl);
-                    vfloat16m1_t _tmp5m = vfmacc_vf_f16m1(vfadd_vv_f16m1(_r01, _r05, vl), -2.5f, _r03, vl);
+                    vint16m1_t _tmp0m = vmacc_vx_i16m1(vnmsac_vx_i16m1(_r04, 5, _r02, vl), 4, _r00, vl);
+                    vint16m1_t _tmp1m = vadd_vv_i16m1(_tmp01b, _tmp01a, vl);
+                    vint16m1_t _tmp2m = vsub_vv_i16m1(_tmp01b, _tmp01a, vl);
+                    vint16m1_t _tmp3m = vsub_vv_i16m1(_tmp23b, _tmp23a, vl);
+                    vint16m1_t _tmp4m = vadd_vv_i16m1(_tmp23b, _tmp23a, vl);
+                    vint16m1_t _tmp5m = vmacc_vx_i16m1(vnmsac_vx_i16m1(_r05, 5, _r03, vl), 4, _r01, vl);
 
-                    vse16_v_f16m1(r0_tm_0, _tmp0m, vl);
-                    vse16_v_f16m1(r0_tm_1, _tmp1m, vl);
-                    vse16_v_f16m1(r0_tm_2, _tmp2m, vl);
-                    vse16_v_f16m1(r0_tm_3, _tmp3m, vl);
-                    vse16_v_f16m1(r0_tm_4, _tmp4m, vl);
-                    vse16_v_f16m1(r0_tm_5, _tmp5m, vl);
+                    vse16_v_i16m1(r0_tm_0, _tmp0m, vl);
+                    vse16_v_i16m1(r0_tm_1, _tmp1m, vl);
+                    vse16_v_i16m1(r0_tm_2, _tmp2m, vl);
+                    vse16_v_i16m1(r0_tm_3, _tmp3m, vl);
+                    vse16_v_i16m1(r0_tm_4, _tmp4m, vl);
+                    vse16_v_i16m1(r0_tm_5, _tmp5m, vl);
 
                     r0_tm_0 += tiles * packn * 6;
                     r0_tm_1 += tiles * packn * 6;

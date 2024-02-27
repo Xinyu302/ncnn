@@ -72,7 +72,7 @@ static void conv3x3s1_winograd43_transform_input_packn_int8_rvv(const Mat& botto
 
                     vint16m1_t _tmp01a = vnmsub_vx_i16m1(_r01, 4, _r03, vl);
                     vint16m1_t _tmp01b = vnmsub_vx_i16m1(_r02, 4, _r04, vl);
-                    vint16m1_t _tmp23a = vmul_vx_i16m1(vsub_vv_i16m1(_r01, _r03, vl), 2, vl);
+                    vint16m1_t _tmp23a = vsll_vx_i16m1(vsub_vv_i16m1(_r01, _r03, vl), 1, vl);
                     vint16m1_t _tmp23b = vsub_vv_i16m1(_r04, _r02, vl);
 
                     vint16m1_t _tmp0m = vmacc_vx_i16m1(vnmsac_vx_i16m1(_r04, 5, _r02, vl), 4, _r00, vl);
@@ -110,7 +110,7 @@ static void conv3x3s1_winograd43_transform_input_packn_int8_rvv(const Mat& botto
 
                     vint16m1_t _tmp01a = vnmsub_vx_i16m1(_r01, 4, _r03, vl);
                     vint16m1_t _tmp01b = vnmsub_vx_i16m1(_r02, 4, _r04, vl);
-                    vint16m1_t _tmp23a = vmul_vx_i16m1(vsub_vv_i16m1(_r01, _r03, vl), 2, vl);
+                    vint16m1_t _tmp23a = vsll_vx_i16m1(vsub_vv_i16m1(_r01, _r03, vl), 1, vl);
                     vint16m1_t _tmp23b = vsub_vv_i16m1(_r04, _r02, vl);
 
                     vint16m1_t _tmp0m = vmacc_vx_i16m1(vnmsac_vx_i16m1(_r04, 5, _r02, vl), 4, _r00, vl);
@@ -187,7 +187,7 @@ static void conv3x3s1_winograd43_transform_output_packn_int8_rvv(const Mat& top_
 
                 int32_t* output0 = out0.row<int32_t>(i * 4) + (j * 4) * packn;
 
-                for (int m = 0; m < 6; m++)
+                for (int m = 0; m < 5; m++)
                 {
                     vint32m2_t _r00 = vle32_v_i32m2(output0_tm_0, vl);
                     vint32m2_t _r01 = vle32_v_i32m2(output0_tm_1, vl);
@@ -204,7 +204,43 @@ static void conv3x3s1_winograd43_transform_output_packn_int8_rvv(const Mat& top_
                     vint32m2_t _tmp0m = vadd_vv_i32m2(vadd_vv_i32m2(_r00, _tmp02a, vl), _tmp02b, vl);
                     vint32m2_t _tmp1m = vmadd_vx_i32m2(_tmp13b, 2, _tmp13a, vl);
                     vint32m2_t _tmp2m = vmadd_vx_i32m2(_tmp02b, 4, _tmp02a, vl);
-                    vint32m2_t _tmp3m = vmadd_vx_i32m2(_tmp13b, 8, vadd_vv_i32m2(_tmp13a, _r05, vl), vl);
+                    vint32m2_t _tmp3m = vmadd_vx_i32m2(_tmp13b, 8, vmadd_vx_i32m2(_r05, 4, _tmp13a, vl), vl);
+
+                    vse32_v_i32m2(tmp[0][m], _tmp0m, vl);
+                    vse32_v_i32m2(tmp[1][m], _tmp1m, vl);
+                    vse32_v_i32m2(tmp[2][m], _tmp2m, vl);
+                    vse32_v_i32m2(tmp[3][m], _tmp3m, vl);
+
+                    output0_tm_0 += tiles * packn * 6;
+                    output0_tm_1 += tiles * packn * 6;
+                    output0_tm_2 += tiles * packn * 6;
+                    output0_tm_3 += tiles * packn * 6;
+                    output0_tm_4 += tiles * packn * 6;
+                    output0_tm_5 += tiles * packn * 6;
+                }
+                for (int m = 5; m < 6; m++)
+                {
+                    vint32m2_t _r00 = vle32_v_i32m2(output0_tm_0, vl);
+                    vint32m2_t _r01 = vle32_v_i32m2(output0_tm_1, vl);
+                    vint32m2_t _r02 = vle32_v_i32m2(output0_tm_2, vl);
+                    vint32m2_t _r03 = vle32_v_i32m2(output0_tm_3, vl);
+                    vint32m2_t _r04 = vle32_v_i32m2(output0_tm_4, vl);
+                    vint32m2_t _r05 = vle32_v_i32m2(output0_tm_5, vl);
+
+                    vint32m2_t _tmp02a = vadd_vv_i32m2(_r01, _r02, vl);
+                    vint32m2_t _tmp02b = vadd_vv_i32m2(_r03, _r04, vl);
+                    vint32m2_t _tmp13a = vsub_vv_i32m2(_r01, _r02, vl);
+                    vint32m2_t _tmp13b = vsub_vv_i32m2(_r03, _r04, vl);
+
+                    vint32m2_t _tmp0m = vadd_vv_i32m2(vadd_vv_i32m2(_r00, _tmp02a, vl), _tmp02b, vl);
+                    vint32m2_t _tmp1m = vmadd_vx_i32m2(_tmp13b, 2, _tmp13a, vl);
+                    vint32m2_t _tmp2m = vmadd_vx_i32m2(_tmp02b, 4, _tmp02a, vl);
+                    vint32m2_t _tmp3m = vmadd_vx_i32m2(_tmp13b, 8, vmadd_vx_i32m2(_r05, 4, _tmp13a, vl), vl);
+
+                    _tmp0m = vsll_vx_i32m2(_tmp0m, 2, vl);
+                    _tmp1m = vsll_vx_i32m2(_tmp1m, 2, vl);
+                    _tmp2m = vsll_vx_i32m2(_tmp2m, 2, vl);
+                    _tmp3m = vsll_vx_i32m2(_tmp3m, 2, vl);
 
                     vse32_v_i32m2(tmp[0][m], _tmp0m, vl);
                     vse32_v_i32m2(tmp[1][m], _tmp1m, vl);
@@ -237,6 +273,12 @@ static void conv3x3s1_winograd43_transform_output_packn_int8_rvv(const Mat& top_
                     vint32m2_t _out01 = vmadd_vx_i32m2(_tmp13b, 2, _tmp13a, vl);
                     vint32m2_t _out02 = vmadd_vx_i32m2(_tmp02b, 4, _tmp02a, vl);
                     vint32m2_t _out03 = vmadd_vx_i32m2(_tmp13b, 8, vadd_vv_i32m2(_tmp13a, _r05, vl), vl);
+
+                    // fastdiv: 2^32 / 7456540 = 576.00003433
+                    _out00 = vmulh_vx_i32m2(_out00, 7456540, vl);
+                    _out01 = vmulh_vx_i32m2(_out01, 7456540, vl);
+                    _out02 = vmulh_vx_i32m2(_out02, 7456540, vl);
+                    _out03 = vmulh_vx_i32m2(_out03, 7456540, vl);
 
                     vse32_v_i32m2(output0 + packn * 0, _out00, vl);
                     vse32_v_i32m2(output0 + packn * 1, _out01, vl);

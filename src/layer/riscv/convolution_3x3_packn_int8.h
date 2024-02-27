@@ -91,7 +91,7 @@ static void conv3x3s1_winograd43_transform_kernel_packn_int8_rvv(const Mat& kern
                 {
                     for (int j = 0; j < packn; j++)
                     {
-                        const int8_t* k00 = kernel_tm.channel(q + j).row<int8_t>(p + i);
+                        const int16_t* k00 = kernel_tm.channel(q + j).row<int16_t>(p + i);
                         g00[0] = (int16_t)k00[k];
                         g00++;
                     }

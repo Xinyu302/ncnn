@@ -164,7 +164,6 @@ static void conv3x3s1_winograd43_transform_output_packn_int8_rvv(const Mat& top_
     // 2 =       (r01 + r02) + (r03 + r04) * 4
     // 3 = r05 + (r01 - r02) + (r03 - r04) * 8
 
-
     #pragma omp parallel for num_threads(opt.num_threads)
     for (int p = 0; p < outch; p++)
     {
@@ -356,7 +355,6 @@ static void conv3x3s1_winograd23_transform_output_packn_int8_rvv(const Mat& top_
     const int w_tiles = outw / 2;
     const int h_tiles = outh / 2;
     const int tiles = w_tiles * h_tiles;
-
 
     // const float otm[2][4] = {
     //     {1.0f,  1.0f,  1.0f,  0.0f},

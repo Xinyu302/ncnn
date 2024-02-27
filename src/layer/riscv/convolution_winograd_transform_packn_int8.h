@@ -399,6 +399,9 @@ static void conv3x3s1_winograd23_transform_output_packn_int8_rvv(const Mat& top_
                     vint32m2_t _tmp0m = vadd_vv_i32m2(vadd_vv_i32m2(_out0tm0, _out0tm1, vl), _out0tm2, vl);
                     vint32m2_t _tmp1m = vadd_vv_i32m2(vsub_vv_i32m2(_out0tm1, _out0tm2, vl), _out0tm3, vl);
 
+                    _tmp0m = vdiv_vx_i32m2(_tmp0m, 2, vl);
+                    _tmp1m = vdiv_vx_i32m2(_tmp1m, 2, vl);
+
                     vse32_v_i32m2(tmp[0][m], _tmp0m, vl);
                     vse32_v_i32m2(tmp[1][m], _tmp1m, vl);
 
@@ -417,6 +420,9 @@ static void conv3x3s1_winograd23_transform_output_packn_int8_rvv(const Mat& top_
 
                     vint32m2_t _out00 = vadd_vv_i32m2(vadd_vv_i32m2(_tmp00, _tmp01, vl), _tmp02, vl);
                     vint32m2_t _out01 = vadd_vv_i32m2(vsub_vv_i32m2(_tmp01, _tmp02, vl), _tmp03, vl);
+
+                    _out00 = vdiv_vx_i32m2(_out00, 2, vl);
+                    _out01 = vdiv_vx_i32m2(_out01, 2, vl);
 
                     vse32_v_i32m2(output0, _out00, vl);
                     vse32_v_i32m2(output0 + packn, _out01, vl);

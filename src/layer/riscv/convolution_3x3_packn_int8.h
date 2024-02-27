@@ -43,7 +43,7 @@ static void conv3x3s1_winograd43_transform_kernel_packn_int8_rvv(const Mat& kern
         for (int q = 0; q < inch; q++)
         {
             const int8_t* kernel0 = (const int8_t*)kernel + p * inch * 9 + q * 9;
-            int8_t* kernel_tm0 = kernel_tm.channel(p).row(q);
+            int16_t* kernel_tm0 = kernel_tm.channel(p).row<int16_t>(q);
 
             // transform kernel
             const int8_t* k0 = kernel0;
@@ -91,7 +91,7 @@ static void conv3x3s1_winograd43_transform_kernel_packn_int8_rvv(const Mat& kern
                 {
                     for (int j = 0; j < packn; j++)
                     {
-                        const int16_t* k00 = kernel_tm.channel(q + j).row(p + i);
+                        const int8_t* k00 = kernel_tm.channel(q + j).row<int8_t>(p + i);
                         g00[0] = (int16_t)k00[k];
                         g00++;
                     }
@@ -101,7 +101,7 @@ static void conv3x3s1_winograd43_transform_kernel_packn_int8_rvv(const Mat& kern
     }
 }
 
-static void conv3x3s1_winograd43_packn_int8_rvv(const Mat& bottom_blob, Mat& top_blob, const Mat& kernel_tm, const Mat& bias, const Option& opt)
+static void conv3x3s1_winograd43_packn_int8_rvv(const Mat& bottom_blob, Mat& top_blob, const Mat& kernel_tm, const Option& opt)
 {
     int w = bottom_blob.w;
     int h = bottom_blob.h;
@@ -151,7 +151,7 @@ static void conv3x3s1_winograd43_packn_int8_rvv(const Mat& bottom_blob, Mat& top
         top_blob_bordered.create(outw, outh, outch, sizeof(int32_t) * elempack, elempack, opt.workspace_allocator);
     }
     {
-        conv3x3s1_winograd43_transform_output_packn_int8_rvv(top_blob_tm, top_blob_bordered, bias, opt);
+        conv3x3s1_winograd43_transform_output_packn_int8_rvv(top_blob_tm, top_blob_bordered, opt);
     }
     // END transform output
 
@@ -184,8 +184,8 @@ static void conv3x3s1_winograd23_transform_kernel_packn_int8_rvv(const Mat& kern
     {
         for (int q = 0; q < inch; q++)
         {
-            const int8_t* kernel0 = (const float*)kernel + p * inch * 9 + q * 9;
-            int8_t* kernel_tm0 = kernel_tm.channel(p).row(q);
+            const int8_t* kernel0 = (const int8_t*)kernel + p * inch * 9 + q * 9;
+            int16_t* kernel_tm0 = kernel_tm.channel(p).row<int16_t>(q);
 
             // transform kernel
             const int8_t* k0 = kernel0;
@@ -225,7 +225,7 @@ static void conv3x3s1_winograd23_transform_kernel_packn_int8_rvv(const Mat& kern
 
         for (int k = 0; k < 16; k++)
         {
-            int8_t* g00 = g0.row<int8_t>(k);
+            int16_t* g00 = g0.row<int16_t>(k);
 
             for (int p = 0; p + (packn - 1) < inch; p += packn)
             {
@@ -233,8 +233,8 @@ static void conv3x3s1_winograd23_transform_kernel_packn_int8_rvv(const Mat& kern
                 {
                     for (int j = 0; j < packn; j++)
                     {
-                        const float* k00 = kernel_tm.channel(q + j).row(p + i);
-                        g00[0] = (int8_t)k00[k];
+                        const int16_t* k00 = kernel_tm.channel(q + j).row<int16_t>(p + i);
+                        g00[0] = (int16_t)k00[k];
                         g00++;
                     }
                 }
@@ -243,7 +243,7 @@ static void conv3x3s1_winograd23_transform_kernel_packn_int8_rvv(const Mat& kern
     }
 }
 
-static void conv3x3s1_winograd23_packn_int8_rvv(const Mat& bottom_blob, Mat& top_blob, const Mat& kernel_tm, const Mat& bias, const Option& opt)
+static void conv3x3s1_winograd23_packn_int8_rvv(const Mat& bottom_blob, Mat& top_blob, const Mat& kernel_tm, const Option& opt)
 {
     int w = bottom_blob.w;
     int h = bottom_blob.h;
@@ -293,7 +293,7 @@ static void conv3x3s1_winograd23_packn_int8_rvv(const Mat& bottom_blob, Mat& top
         top_blob_bordered.create(outw, outh, outch, sizeof(int32_t) * elempack, elempack, opt.workspace_allocator);
     }
     {
-        conv3x3s1_winograd23_transform_output_packn_int8_rvv(top_blob_tm, top_blob_bordered, bias, opt);
+        conv3x3s1_winograd23_transform_output_packn_int8_rvv(top_blob_tm, top_blob_bordered, opt);
     }
     // END transform output
 

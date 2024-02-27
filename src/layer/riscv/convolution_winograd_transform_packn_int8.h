@@ -55,7 +55,7 @@ static void conv3x3s1_winograd43_transform_input_packn_int8_rvv(const Mat& botto
         {
             for (int j = 0; j < w_tiles; j++)
             {
-                const int16_t* r0 = img0.row<const int8_t>(i * 4) + (j * 4) * packn;
+                const int8_t* r0 = img0.row<const int8_t>(i * 4) + (j * 4) * packn;
 
                 for (int m = 0; m < 6; m++)
                 {
@@ -63,12 +63,12 @@ static void conv3x3s1_winograd43_transform_input_packn_int8_rvv(const Mat& botto
                     vint16m2_t _r02_03 = vwcvt_x_x_v_i16m2(vle8_v_i8m1(r0 + packn * 2, vl * 2), vl * 2);
                     vint16m2_t _r04_05 = vwcvt_x_x_v_i16m2(vle8_v_i8m1(r0 + packn * 4, vl * 2), vl * 2);
 
-                    vint16m1_t _r00 = vget_v_i16m2_i16m1(_r00_01, 0, vl);
-                    vint16m1_t _r01 = vget_v_i16m2_i16m1(_r00_01, 1, vl);
-                    vint16m1_t _r02 = vget_v_i16m2_i16m1(_r02_03, 0, vl);
-                    vint16m1_t _r03 = vget_v_i16m2_i16m1(_r02_03, 1, vl);
-                    vint16m1_t _r04 = vget_v_i16m2_i16m1(_r04_05, 0, vl);
-                    vint16m1_t _r05 = vget_v_i16m2_i16m1(_r04_05, 1, vl);
+                    vint16m1_t _r00 = vget_v_i16m2_i16m1(_r00_01, 0);
+                    vint16m1_t _r01 = vget_v_i16m2_i16m1(_r00_01, 1);
+                    vint16m1_t _r02 = vget_v_i16m2_i16m1(_r02_03, 0);
+                    vint16m1_t _r03 = vget_v_i16m2_i16m1(_r02_03, 1);
+                    vint16m1_t _r04 = vget_v_i16m2_i16m1(_r04_05, 0);
+                    vint16m1_t _r05 = vget_v_i16m2_i16m1(_r04_05, 1);
 
                     vint16m1_t _tmp01a = vnmsub_vx_i16m1(_r01, 4, _r03, vl);
                     vint16m1_t _tmp01b = vnmsub_vx_i16m1(_r02, 4, _r04, vl);
@@ -178,14 +178,14 @@ static void conv3x3s1_winograd43_transform_output_packn_int8_rvv(const Mat& top_
         {
             for (int j = 0; j < w_tiles; j++)
             {
-                const int32_t* output0_tm_0 = (const int8_t*)out0_tm + (i * w_tiles + j) * packn;
+                const int32_t* output0_tm_0 = (const int32_t*)out0_tm + (i * w_tiles + j) * packn;
                 const int32_t* output0_tm_1 = output0_tm_0 + tiles * packn;
                 const int32_t* output0_tm_2 = output0_tm_0 + tiles * packn * 2;
                 const int32_t* output0_tm_3 = output0_tm_0 + tiles * packn * 3;
                 const int32_t* output0_tm_4 = output0_tm_0 + tiles * packn * 4;
                 const int32_t* output0_tm_5 = output0_tm_0 + tiles * packn * 5;
 
-                int32_t* output0 = out0.row<int8_t>(i * 4) + (j * 4) * packn;
+                int32_t* output0 = out0.row<int32_t>(i * 4) + (j * 4) * packn;
 
                 for (int m = 0; m < 6; m++)
                 {
@@ -202,9 +202,9 @@ static void conv3x3s1_winograd43_transform_output_packn_int8_rvv(const Mat& top_
                     vint32m2_t _tmp13b = vsub_vv_i32m2(_r03, _r04, vl);
 
                     vint32m2_t _tmp0m = vadd_vv_i32m2(vadd_vv_i32m2(_r00, _tmp02a, vl), _tmp02b, vl);
-                    vint32m2_t _tmp1m = vmadd_v_i32m2(_tmp13b, 2, _tmp13a, vl);
-                    vint32m2_t _tmp2m = vmadd_v_i32m2(_tmp02b, 4, _tmp02a, vl);
-                    vint32m2_t _tmp3m = vmadd_v_i32m2(_tmp13b, 8, vadd_v_i32m2(_tmp13a, _r05, vl), vl);
+                    vint32m2_t _tmp1m = vmadd_vx_i32m2(_tmp13b, 2, _tmp13a, vl);
+                    vint32m2_t _tmp2m = vmadd_vx_i32m2(_tmp02b, 4, _tmp02a, vl);
+                    vint32m2_t _tmp3m = vmadd_vx_i32m2(_tmp13b, 8, vadd_vv_i32m2(_tmp13a, _r05, vl), vl);
 
                     vse32_v_i32m2(tmp[0][m], _tmp0m, vl);
                     vse32_v_i32m2(tmp[1][m], _tmp1m, vl);
@@ -234,9 +234,9 @@ static void conv3x3s1_winograd43_transform_output_packn_int8_rvv(const Mat& top_
                     vint32m2_t _tmp13b = vsub_vv_i32m2(_r03, _r04, vl);
 
                     vint32m2_t _out00 = vadd_vv_i32m2(vadd_vv_i32m2(_r00, _tmp02a, vl), _tmp02b, vl);
-                    vint32m2_t _out01 = vmadd_v_i32m2(_tmp13b, 2, _tmp13a, vl);
-                    vint32m2_t _out02 = vmadd_v_i32m2(_tmp02b, 4, _tmp02a, vl);
-                    vint32m2_t _out03 = vmadd_v_i32m2(_tmp13b, 8, vadd_v_i32m2(_tmp13a, _r05, vl), vl);
+                    vint32m2_t _out01 = vmadd_vx_i32m2(_tmp13b, 2, _tmp13a, vl);
+                    vint32m2_t _out02 = vmadd_vx_i32m2(_tmp02b, 4, _tmp02a, vl);
+                    vint32m2_t _out03 = vmadd_vx_i32m2(_tmp13b, 8, vadd_vv_i32m2(_tmp13a, _r05, vl), vl);
 
                     vse32_v_i32m2(output0 + packn * 0, _out00, vl);
                     vse32_v_i32m2(output0 + packn * 1, _out01, vl);
@@ -289,14 +289,18 @@ static void conv3x3s1_winograd23_transform_input_packn_int8_rvv(const Mat& botto
         {
             for (int j = 0; j < w_tiles; j++)
             {
-                const int16_t* r0 = img0.row<const int16_t>(i * 2) + (j * 2) * packn;
+                const int8_t* r0 = img0.row<const int8_t>(i * 2) + (j * 2) * packn;
 
                 for (int m = 0; m < 4; m++)
                 {
-                    vint16m1_t _r00 = vle16_v_i16m1(r0, vl);
-                    vint16m1_t _r01 = vle16_v_i16m1(r0 + packn, vl);
-                    vint16m1_t _r02 = vle16_v_i16m1(r0 + packn * 2, vl);
-                    vint16m1_t _r03 = vle16_v_i16m1(r0 + packn * 3, vl);
+                    vint16m1_t _r00 = vget_v_i16m2_i16m1(vwcvt_x_x_v_i16m2(vle8_v_i8m1(r0, vl), vl), 0);
+                    vint16m1_t _r01 = vget_v_i16m2_i16m1(vwcvt_x_x_v_i16m2(vle8_v_i8m1(r0 + packn, vl), vl), 0);
+                    vint16m1_t _r02 = vget_v_i16m2_i16m1(vwcvt_x_x_v_i16m2(vle8_v_i8m1(r0 + packn * 2, vl), vl), 0);
+                    vint16m1_t _r03 = vget_v_i16m2_i16m1(vwcvt_x_x_v_i16m2(vle8_v_i8m1(r0 + packn * 3, vl), vl), 0);
+                    // vint16m1_t _r00 = vle16_v_i16m1(r0, vl);
+                    // vint16m1_t _r01 = vle16_v_i16m1(r0 + packn, vl);
+                    // vint16m1_t _r02 = vle16_v_i16m1(r0 + packn * 2, vl);
+                    // vint16m1_t _r03 = vle16_v_i16m1(r0 + packn * 3, vl);
 
                     vint16m1_t _tmp0m = vsub_vv_i16m1(_r00, _r02, vl);
                     vint16m1_t _tmp1m = vadd_vv_i16m1(_r01, _r02, vl);
@@ -371,32 +375,32 @@ static void conv3x3s1_winograd23_transform_output_packn_int8_rvv(const Mat& top_
         Mat out0 = top_blob.channel(p);
 
         // NOTE variable length array
-        int16_t tmp[2][4][packn];
+        int32_t tmp[2][4][packn];
 
         // tile
         for (int i = 0; i < h_tiles; i++)
         {
             for (int j = 0; j < w_tiles; j++)
             {
-                const int16_t* output0_tm_0 = (const int16_t*)out0_tm + (i * w_tiles + j) * packn;
-                const int16_t* output0_tm_1 = output0_tm_0 + tiles * packn;
-                const int16_t* output0_tm_2 = output0_tm_0 + tiles * packn * 2;
-                const int16_t* output0_tm_3 = output0_tm_0 + tiles * packn * 3;
+                const int32_t* output0_tm_0 = (const int32_t*)out0_tm + (i * w_tiles + j) * packn;
+                const int32_t* output0_tm_1 = output0_tm_0 + tiles * packn;
+                const int32_t* output0_tm_2 = output0_tm_0 + tiles * packn * 2;
+                const int32_t* output0_tm_3 = output0_tm_0 + tiles * packn * 3;
 
-                int16_t* output0 = out0.row<int16_t>(i * 2) + (j * 2) * packn;
+                int32_t* output0 = out0.row<int32_t>(i * 2) + (j * 2) * packn;
 
                 for (int m = 0; m < 4; m++)
                 {
-                    vint16m1_t _out0tm0 = vle16_v_i16m1(output0_tm_0, vl);
-                    vint16m1_t _out0tm1 = vle16_v_i16m1(output0_tm_1, vl);
-                    vint16m1_t _out0tm2 = vle16_v_i16m1(output0_tm_2, vl);
-                    vint16m1_t _out0tm3 = vle16_v_i16m1(output0_tm_3, vl);
+                    vint32m2_t _out0tm0 = vle32_v_i32m2(output0_tm_0, vl);
+                    vint32m2_t _out0tm1 = vle32_v_i32m2(output0_tm_1, vl);
+                    vint32m2_t _out0tm2 = vle32_v_i32m2(output0_tm_2, vl);
+                    vint32m2_t _out0tm3 = vle32_v_i32m2(output0_tm_3, vl);
 
-                    vint16m1_t _tmp0m = vadd_vv_i16m1(vadd_vv_i16m1(_out0tm0, _out0tm1, vl), _out0tm2, vl);
-                    vint16m1_t _tmp1m = vadd_vv_i16m1(vsub_vv_i16m1(_out0tm1, _out0tm2, vl), _out0tm3, vl);
+                    vint32m2_t _tmp0m = vadd_vv_i32m2(vadd_vv_i32m2(_out0tm0, _out0tm1, vl), _out0tm2, vl);
+                    vint32m2_t _tmp1m = vadd_vv_i32m2(vsub_vv_i32m2(_out0tm1, _out0tm2, vl), _out0tm3, vl);
 
-                    vse16_v_i16m1(tmp[0][m], _tmp0m, vl);
-                    vse16_v_i16m1(tmp[1][m], _tmp1m, vl);
+                    vse32_v_i32m2(tmp[0][m], _tmp0m, vl);
+                    vse32_v_i32m2(tmp[1][m], _tmp1m, vl);
 
                     output0_tm_0 += tiles * packn * 4;
                     output0_tm_1 += tiles * packn * 4;
@@ -406,16 +410,16 @@ static void conv3x3s1_winograd23_transform_output_packn_int8_rvv(const Mat& top_
 
                 for (int m = 0; m < 2; m++)
                 {
-                    vint16m1_t _tmp00 = vle16_v_i16m1(tmp[m][0], vl);
-                    vint16m1_t _tmp01 = vle16_v_i16m1(tmp[m][1], vl);
-                    vint16m1_t _tmp02 = vle16_v_i16m1(tmp[m][2], vl);
-                    vint16m1_t _tmp03 = vle16_v_i16m1(tmp[m][3], vl);
+                    vint32m2_t _tmp00 = vle32_v_i32m2(tmp[m][0], vl);
+                    vint32m2_t _tmp01 = vle32_v_i32m2(tmp[m][1], vl);
+                    vint32m2_t _tmp02 = vle32_v_i32m2(tmp[m][2], vl);
+                    vint32m2_t _tmp03 = vle32_v_i32m2(tmp[m][3], vl);
 
-                    vint16m1_t _out00 = vadd_vv_i16m1(vadd_vv_i16m1(_tmp00, _tmp01, vl), _tmp02, vl);
-                    vint16m1_t _out01 = vadd_vv_i16m1(vsub_vv_i16m1(_tmp01, _tmp02, vl), _tmp03, vl);
+                    vint32m2_t _out00 = vadd_vv_i32m2(vadd_vv_i32m2(_tmp00, _tmp01, vl), _tmp02, vl);
+                    vint32m2_t _out01 = vadd_vv_i32m2(vsub_vv_i32m2(_tmp01, _tmp02, vl), _tmp03, vl);
 
-                    vse16_v_i16m1(output0, _out00, vl);
-                    vse16_v_i16m1(output0 + packn, _out01, vl);
+                    vse32_v_i32m2(output0, _out00, vl);
+                    vse32_v_i32m2(output0 + packn, _out01, vl);
 
                     output0 += outw * packn;
                 }

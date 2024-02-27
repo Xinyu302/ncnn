@@ -1168,27 +1168,7 @@ int Convolution_riscv::create_pipeline_int8(const Option& opt)
     }
 
     bool prefer_winograd = (opt.use_winograd23_convolution || opt.use_winograd43_convolution) && (num_input >= 8 && num_output >= 8) && kernel_w == 3 && kernel_h == 3 && dilation_w == 1 && dilation_h == 1 && stride_w == 1 && stride_h == 1;
-    // #if NCNN_ARM82DOT
-    //     if (ncnn::cpu_support_arm_asimddp())
-    //     {
-    //         prefer_winograd = false;
-    //     }
-    // #endif
 
-#if 0
-    if (opt.use_winograd_convolution && prefer_winograd)
-    {
-        if (opt.use_winograd43_convolution)
-            conv3x3s1_winograd43_transform_kernel_int8(weight_data, weight_winograd43_data, num_input, num_output, opt);
-        else
-            conv3x3s1_winograd23_transform_kernel_int8(weight_data, weight_winograd23_data, num_input, num_output, opt);
-    }
-    else if (opt.use_sgemm_convolution)
-    {
-        convolution_im2col_gemm_transform_kernel_int8(weight_data, weight_sgemm_data, num_input, num_output, kernel_w, kernel_h, opt);
-    }
-    else
-#endif
     // packn
     if (elempack == packn && out_elempack == packn)
     {
@@ -1199,6 +1179,13 @@ int Convolution_riscv::create_pipeline_int8(const Option& opt)
         else if (kernel_w == 1 && kernel_h == 1 && dilation_w == 1 && dilation_h == 1 && stride_w == 2 && stride_h == 2)
         {
             convolution_transform_kernel_packed_int8_rvv(weight_data, weight_data_tm, num_input, num_output, kernel_w, kernel_h, elempack, out_elempack);
+        }
+        else if (opt.use_winograd_convolution && prefer_winograd)
+        {
+            if (opt.use_winograd43_convolution)
+                conv3x3s1_winograd43_transform_kernel_packn_int8_rvv(weight_data, weight_winograd43_data, num_input, num_output, opt);
+            else
+                conv3x3s1_winograd23_transform_kernel_packn_int8_rvv(weight_data, weight_winograd23_data, num_input, num_output, opt);
         }
         else if (opt.use_sgemm_convolution)
         {

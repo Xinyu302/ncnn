@@ -147,14 +147,14 @@ static void convolution_winograd_dot_packn_int8_rvv(Mat& bottom_blob_tm, int out
 
                 int nn = inch * packn; // inch always > 0
 
-                vint32m2_t _sum0 = vmv_v_x_i16m1(0, vl);
-                vint32m2_t _sum1 = vmv_v_x_i16m1(0, vl);
-                vint32m2_t _sum2 = vmv_v_x_i16m1(0, vl);
-                vint32m2_t _sum3 = vmv_v_x_i16m1(0, vl);
-                vint32m2_t _sum4 = vmv_v_x_i16m1(0, vl);
-                vint32m2_t _sum5 = vmv_v_x_i16m1(0, vl);
-                vint32m2_t _sum6 = vmv_v_x_i16m1(0, vl);
-                vint32m2_t _sum7 = vmv_v_x_i16m1(0, vl);
+                vint32m2_t _sum0 = vmv_v_x_i32m2(0, vl);
+                vint32m2_t _sum1 = vmv_v_x_i32m2(0, vl);
+                vint32m2_t _sum2 = vmv_v_x_i32m2(0, vl);
+                vint32m2_t _sum3 = vmv_v_x_i32m2(0, vl);
+                vint32m2_t _sum4 = vmv_v_x_i32m2(0, vl);
+                vint32m2_t _sum5 = vmv_v_x_i32m2(0, vl);
+                vint32m2_t _sum6 = vmv_v_x_i32m2(0, vl);
+                vint32m2_t _sum7 = vmv_v_x_i32m2(0, vl);
 
                 for (int j = 0; j < nn; j++)
                 {
@@ -197,10 +197,10 @@ static void convolution_winograd_dot_packn_int8_rvv(Mat& bottom_blob_tm, int out
 
                 int nn = inch * packn; // inch always > 0
 
-                vint32m2_t _sum0 = vmv_v_x_i16m1(0, vl);
-                vint32m2_t _sum1 = vmv_v_x_i16m1(0, vl);
-                vint32m2_t _sum2 = vmv_v_x_i16m1(0, vl);
-                vint32m2_t _sum3 = vmv_v_x_i16m1(0, vl);
+                vint32m2_t _sum0 = vmv_v_x_i32m2(0, vl);
+                vint32m2_t _sum1 = vmv_v_x_i32m2(0, vl);
+                vint32m2_t _sum2 = vmv_v_x_i32m2(0, vl);
+                vint32m2_t _sum3 = vmv_v_x_i32m2(0, vl);
 
                 for (int j = 0; j < nn; j++)
                 {
@@ -231,8 +231,8 @@ static void convolution_winograd_dot_packn_int8_rvv(Mat& bottom_blob_tm, int out
 
                 int nn = inch * packn; // inch always > 0
 
-                vint32m2_t _sum0 = vmv_v_x_i16m1(0, vl);
-                vint32m2_t _sum1 = vmv_v_x_i16m1(0, vl);
+                vint32m2_t _sum0 = vmv_v_x_i32m2(0, vl);
+                vint32m2_t _sum1 = vmv_v_x_i32m2(0, vl);
 
                 for (int j = 0; j < nn; j++)
                 {
@@ -257,7 +257,7 @@ static void convolution_winograd_dot_packn_int8_rvv(Mat& bottom_blob_tm, int out
 
                 int nn = inch * packn; // inch always > 0
 
-                vint32m2_t _sum = vmv_v_x_i16m1(0, vl);
+                vint32m2_t _sum = vmv_v_x_i32m2(0, vl);
 
                 for (int j = 0; j < nn; j++)
                 {

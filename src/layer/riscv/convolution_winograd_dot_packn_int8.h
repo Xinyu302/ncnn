@@ -125,7 +125,7 @@ static void convolution_winograd_dot_packn_int8_rvv(Mat& bottom_blob_tm, int out
     bottom_blob_tm = Mat();
     // permute end
 
-    top_blob_tm.create(tiles, batch, outch, 2u * packn, packn, opt.workspace_allocator);
+    top_blob_tm.create(tiles, batch, outch, 4u * packn, packn, opt.workspace_allocator);
 
     int p = 0;
     #pragma omp parallel for num_threads(opt.num_threads)

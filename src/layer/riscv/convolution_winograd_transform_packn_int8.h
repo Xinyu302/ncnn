@@ -139,10 +139,10 @@ static void conv3x3s1_winograd43_transform_input_packn_int8_rvv(const Mat& botto
     }
 }
 
-static void conv3x3s1_winograd43_transform_output_packn_int8_rvv(const Mat& top_blob_tm, Mat& top_blob, const Mat& bias, const Option& opt)
+static void conv3x3s1_winograd43_transform_output_packn_int8_rvv(const Mat& top_blob_tm, Mat& top_blob, const Option& opt)
 {
     const int packn = csrr_vlenb() / 2;
-    const size_t vl = vsetvl_e16m1(packn);
+    const size_t vl = vsetvl_e32m2(packn);
 
     const int outw = top_blob.w;
     const int outh = top_blob.h;
@@ -152,24 +152,17 @@ static void conv3x3s1_winograd43_transform_output_packn_int8_rvv(const Mat& top_
     const int h_tiles = outh / 4;
     const int tiles = w_tiles * h_tiles;
 
-    const int8_t* biasptr = bias;
-
-    const float sq2 = 1.41421356237;
-    const float sq2_m2 = 1.41421356237 * 2;
-    const float sq2_d2 = 1.41421356237 / 2;
-    const float sq2_d4 = 1.41421356237 / 4;
-
-    // const float otm[4][6] = {
-    //     {1.0f, 1.0f,   1.0f,  1.0f,  1.0f,   0.0f},
-    //     {0.0f, sq2/2, -sq2/2, sq2,   -sq2,   0.0f},
-    //     {0.0f, 0.5f,   0.5f,  2.0f,  2.0f,   0.0f},
-    //     {0.0f, sq2/4, -sq2/4, sq2*2, -sq2*2, 1.0f}
+    // const int otm[4][6] = {
+    //     {1, 1,  1, 1,  1, 0},
+    //     {0, 1, -1, 2, -2, 0},
+    //     {0, 1,  1, 4,  4, 0},
+    //     {0, 1, -1, 8, -8, 1}
     // };
 
     // 0 = r00 + (r01 + r02) + (r03 + r04)
-    // 1 =       (r01 - r02) * sq2_d2 + (r03 - r04) * sq2
-    // 2 =       (r01 + r02) * 0.5f + (r03 + r04) * 2
-    // 3 = r05 + (r01 - r02) * sq2_d4 + (r03 - r04) * sq2_m2
+    // 1 =       (r01 - r02) + (r03 - r04) * 2
+    // 2 =       (r01 + r02) + (r03 + r04) * 4
+    // 3 = r05 + (r01 - r02) + (r03 - r04) * 8
 
     #pragma omp parallel for num_threads(opt.num_threads)
     for (int p = 0; p < outch; p++)
@@ -177,48 +170,46 @@ static void conv3x3s1_winograd43_transform_output_packn_int8_rvv(const Mat& top_
         const Mat out0_tm = top_blob_tm.channel(p);
         Mat out0 = top_blob.channel(p);
 
-        vfloat16m1_t _bias0 = biasptr ? vle16_v_f16m1(biasptr + p * packn, vl) : vfmv_v_f_f16m1(0.f, vl);
-
         // NOTE variable length array
-        int8_t tmp[4][6][packn];
+        int32_t tmp[4][6][packn];
 
         // tile
         for (int i = 0; i < h_tiles; i++)
         {
             for (int j = 0; j < w_tiles; j++)
             {
-                const int8_t* output0_tm_0 = (const int8_t*)out0_tm + (i * w_tiles + j) * packn;
-                const int8_t* output0_tm_1 = output0_tm_0 + tiles * packn;
-                const int8_t* output0_tm_2 = output0_tm_0 + tiles * packn * 2;
-                const int8_t* output0_tm_3 = output0_tm_0 + tiles * packn * 3;
-                const int8_t* output0_tm_4 = output0_tm_0 + tiles * packn * 4;
-                const int8_t* output0_tm_5 = output0_tm_0 + tiles * packn * 5;
+                const int32_t* output0_tm_0 = (const int8_t*)out0_tm + (i * w_tiles + j) * packn;
+                const int32_t* output0_tm_1 = output0_tm_0 + tiles * packn;
+                const int32_t* output0_tm_2 = output0_tm_0 + tiles * packn * 2;
+                const int32_t* output0_tm_3 = output0_tm_0 + tiles * packn * 3;
+                const int32_t* output0_tm_4 = output0_tm_0 + tiles * packn * 4;
+                const int32_t* output0_tm_5 = output0_tm_0 + tiles * packn * 5;
 
-                int8_t* output0 = out0.row<int8_t>(i * 4) + (j * 4) * packn;
+                int32_t* output0 = out0.row<int8_t>(i * 4) + (j * 4) * packn;
 
                 for (int m = 0; m < 6; m++)
                 {
-                    vfloat16m1_t _r00 = vle16_v_f16m1(output0_tm_0, vl);
-                    vfloat16m1_t _r01 = vle16_v_f16m1(output0_tm_1, vl);
-                    vfloat16m1_t _r02 = vle16_v_f16m1(output0_tm_2, vl);
-                    vfloat16m1_t _r03 = vle16_v_f16m1(output0_tm_3, vl);
-                    vfloat16m1_t _r04 = vle16_v_f16m1(output0_tm_4, vl);
-                    vfloat16m1_t _r05 = vle16_v_f16m1(output0_tm_5, vl);
+                    vint32m2_t _r00 = vle32_v_i32m2(output0_tm_0, vl);
+                    vint32m2_t _r01 = vle32_v_i32m2(output0_tm_1, vl);
+                    vint32m2_t _r02 = vle32_v_i32m2(output0_tm_2, vl);
+                    vint32m2_t _r03 = vle32_v_i32m2(output0_tm_3, vl);
+                    vint32m2_t _r04 = vle32_v_i32m2(output0_tm_4, vl);
+                    vint32m2_t _r05 = vle32_v_i32m2(output0_tm_5, vl);
 
-                    vfloat16m1_t _tmp02a = vfadd_vv_f16m1(_r01, _r02, vl);
-                    vfloat16m1_t _tmp02b = vfadd_vv_f16m1(_r03, _r04, vl);
-                    vfloat16m1_t _tmp13a = vfsub_vv_f16m1(_r01, _r02, vl);
-                    vfloat16m1_t _tmp13b = vfsub_vv_f16m1(_r03, _r04, vl);
+                    vint32m2_t _tmp02a = vadd_vv_i32m2(_r01, _r02, vl);
+                    vint32m2_t _tmp02b = vadd_vv_i32m2(_r03, _r04, vl);
+                    vint32m2_t _tmp13a = vsub_vv_i32m2(_r01, _r02, vl);
+                    vint32m2_t _tmp13b = vsub_vv_i32m2(_r03, _r04, vl);
 
-                    vfloat16m1_t _tmp0m = vfadd_vv_f16m1(vfadd_vv_f16m1(_r00, _tmp02a, vl), _tmp02b, vl);
-                    vfloat16m1_t _tmp1m = vfmacc_vf_f16m1(vfmul_vf_f16m1(_tmp13a, sq2_d2, vl), sq2, _tmp13b, vl);
-                    vfloat16m1_t _tmp2m = vfmacc_vf_f16m1(vfmul_vf_f16m1(_tmp02a, 0.5f, vl), 2.f, _tmp02b, vl);
-                    vfloat16m1_t _tmp3m = vfmacc_vf_f16m1(vfmacc_vf_f16m1(_r05, sq2_d4, _tmp13a, vl), sq2_m2, _tmp13b, vl);
+                    vint32m2_t _tmp0m = vadd_vv_i32m2(vadd_vv_i32m2(_r00, _tmp02a, vl), _tmp02b, vl);
+                    vint32m2_t _tmp1m = vmadd_v_i32m2(_tmp13b, 2, _tmp13a, vl);
+                    vint32m2_t _tmp2m = vmadd_v_i32m2(_tmp02b, 4, _tmp02a, vl);
+                    vint32m2_t _tmp3m = vmadd_v_i32m2(_tmp13b, 8, vadd_v_i32m2(_tmp13a, _r05, vl), vl);
 
-                    vse16_v_f16m1(tmp[0][m], _tmp0m, vl);
-                    vse16_v_f16m1(tmp[1][m], _tmp1m, vl);
-                    vse16_v_f16m1(tmp[2][m], _tmp2m, vl);
-                    vse16_v_f16m1(tmp[3][m], _tmp3m, vl);
+                    vse32_v_i32m2(tmp[0][m], _tmp0m, vl);
+                    vse32_v_i32m2(tmp[1][m], _tmp1m, vl);
+                    vse32_v_i32m2(tmp[2][m], _tmp2m, vl);
+                    vse32_v_i32m2(tmp[3][m], _tmp3m, vl);
 
                     output0_tm_0 += tiles * packn * 6;
                     output0_tm_1 += tiles * packn * 6;
@@ -230,27 +221,27 @@ static void conv3x3s1_winograd43_transform_output_packn_int8_rvv(const Mat& top_
 
                 for (int m = 0; m < 4; m++)
                 {
-                    vfloat16m1_t _r00 = vle16_v_f16m1(tmp[m][0], vl);
-                    vfloat16m1_t _r01 = vle16_v_f16m1(tmp[m][1], vl);
-                    vfloat16m1_t _r02 = vle16_v_f16m1(tmp[m][2], vl);
-                    vfloat16m1_t _r03 = vle16_v_f16m1(tmp[m][3], vl);
-                    vfloat16m1_t _r04 = vle16_v_f16m1(tmp[m][4], vl);
-                    vfloat16m1_t _r05 = vle16_v_f16m1(tmp[m][5], vl);
+                    vint32m2_t _r00 = vle32_v_i32m2(tmp[m][0], vl);
+                    vint32m2_t _r01 = vle32_v_i32m2(tmp[m][1], vl);
+                    vint32m2_t _r02 = vle32_v_i32m2(tmp[m][2], vl);
+                    vint32m2_t _r03 = vle32_v_i32m2(tmp[m][3], vl);
+                    vint32m2_t _r04 = vle32_v_i32m2(tmp[m][4], vl);
+                    vint32m2_t _r05 = vle32_v_i32m2(tmp[m][5], vl);
 
-                    vfloat16m1_t _tmp02a = vfadd_vv_f16m1(_r01, _r02, vl);
-                    vfloat16m1_t _tmp02b = vfadd_vv_f16m1(_r03, _r04, vl);
-                    vfloat16m1_t _tmp13a = vfsub_vv_f16m1(_r01, _r02, vl);
-                    vfloat16m1_t _tmp13b = vfsub_vv_f16m1(_r03, _r04, vl);
+                    vint32m2_t _tmp02a = vadd_vv_i32m2(_r01, _r02, vl);
+                    vint32m2_t _tmp02b = vadd_vv_i32m2(_r03, _r04, vl);
+                    vint32m2_t _tmp13a = vsub_vv_i32m2(_r01, _r02, vl);
+                    vint32m2_t _tmp13b = vsub_vv_i32m2(_r03, _r04, vl);
 
-                    vfloat16m1_t _out00 = vfadd_vv_f16m1(_bias0, vfadd_vv_f16m1(vfadd_vv_f16m1(_r00, _tmp02a, vl), _tmp02b, vl), vl);
-                    vfloat16m1_t _out01 = vfadd_vv_f16m1(_bias0, vfmacc_vf_f16m1(vfmul_vf_f16m1(_tmp13a, sq2_d2, vl), sq2, _tmp13b, vl), vl);
-                    vfloat16m1_t _out02 = vfadd_vv_f16m1(_bias0, vfmacc_vf_f16m1(vfmul_vf_f16m1(_tmp02a, 0.5f, vl), 2.f, _tmp02b, vl), vl);
-                    vfloat16m1_t _out03 = vfadd_vv_f16m1(_bias0, vfmacc_vf_f16m1(vfmacc_vf_f16m1(_r05, sq2_d4, _tmp13a, vl), sq2_m2, _tmp13b, vl), vl);
+                    vint32m2_t _out00 = vadd_vv_i32m2(vadd_vv_i32m2(_r00, _tmp02a, vl), _tmp02b, vl);
+                    vint32m2_t _out01 = vmadd_v_i32m2(_tmp13b, 2, _tmp13a, vl);
+                    vint32m2_t _out02 = vmadd_v_i32m2(_tmp02b, 4, _tmp02a, vl);
+                    vint32m2_t _out03 = vmadd_v_i32m2(_tmp13b, 8, vadd_v_i32m2(_tmp13a, _r05, vl), vl);
 
-                    vse16_v_f16m1(output0, _out00, vl);
-                    vse16_v_f16m1(output0 + packn, _out01, vl);
-                    vse16_v_f16m1(output0 + packn * 2, _out02, vl);
-                    vse16_v_f16m1(output0 + packn * 3, _out03, vl);
+                    vse32_v_i32m2(output0 + packn * 0, _out00, vl);
+                    vse32_v_i32m2(output0 + packn * 1, _out01, vl);
+                    vse32_v_i32m2(output0 + packn * 2, _out02, vl);
+                    vse32_v_i32m2(output0 + packn * 3, _out03, vl);
 
                     output0 += outw * packn;
                 }
@@ -365,8 +356,6 @@ static void conv3x3s1_winograd23_transform_output_packn_int8_rvv(const Mat& top_
     const int h_tiles = outh / 2;
     const int tiles = w_tiles * h_tiles;
 
-    // const int8_t* biasptr = bias;
-
     // const float otm[2][4] = {
     //     {1.0f,  1.0f,  1.0f,  0.0f},
     //     {0.0f,  1.0f, -1.0f,  1.0f}
@@ -380,8 +369,6 @@ static void conv3x3s1_winograd23_transform_output_packn_int8_rvv(const Mat& top_
     {
         const Mat out0_tm = top_blob_tm.channel(p);
         Mat out0 = top_blob.channel(p);
-
-        // vint16m1_t _bias0 = biasptr ? vle16_v_i16m1(biasptr + p * packn, vl) : vfmv_v_f_f16m1(0.f, vl);
 
         // NOTE variable length array
         int16_t tmp[2][4][packn];
